@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YHCT 3D Anatomy & Knowledge Graph</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Three.js Core -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { margin: 0; overflow: hidden; background-color: #09090b; font-family: 'Inter', sans-serif; color: #f8fafc; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        .glass-panel {
+            background: rgba(9, 9, 11, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+
+        .pill-checkbox input:checked + div {
+            background-color: var(--active-bg);
+            border-color: var(--active-border);
+            color: white;
+        }
+
+        input[type=range] { -webkit-appearance: none; background: rgba(255, 255, 255, 0.1); }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 12px; width: 12px;
+            border-radius: 50%; background: #38bdf8; cursor: pointer;
+            box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);
+        }
+
+        /* Màn hình chờ Auto-Load */
+        #init-loader {
+            position: fixed; inset: 0; background: rgba(9, 9, 11, 0.95); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s; backdrop-filter: blur(10px);
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 3px solid rgba(56, 189, 248, 0.2);
+            border-top-color: #38bdf8; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- MÀN HÌNH CHỜ AUTO-LOAD -->
+    <div id="init-loader">
+        <div class="spinner mb-6"></div>
+        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight mb-2">TCM Platform Engine</h1>
+        <p class="text-slate-400 text-sm mb-6">Đang tự động đồng bộ dữ liệu từ máy chủ...</p>
+        
+        <div class="text-xs text-slate-500 bg-white/5 p-4 rounded-xl border border-white/5 w-80">
+            <div class="flex justify-between mb-2" id="status-model"><span>Mô hình 3D (human_body.glb)</span> <span class="text-yellow-400">Đang tải...</span></div>
+            <div class="flex justify-between mb-2" id="status-vithuoc"><span>Vị thuốc (ViThuoc_final.csv)</span> <span class="text-yellow-400">Đang tải...</span></div>
+            <div class="flex justify-between" id="status-baithuoc"><span>Bài thuốc (CSDL Công thức)</span> <span class="text-yellow-400">Đang tải...</span></div>
+        </div>
+
+        <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
+            <p class="text-red-400 text-xs text-center">Không thể tải tự động (Có thể do chạy file cục bộ không qua HTTP). Vui lòng tải thủ công:</p>
+            <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600">
+                <span>Tải Model (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
+            </label>
+            <label class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-blue-500/50">
+                <span>Tải ViThuoc_final.csv</span> <input type="file" id="fallback-csv" accept=".csv" class="hidden">
+            </label>
+            <button onclick="hideLoader()" class="bg-white/10 hover:bg-white/20 text-white text-sm py-2 rounded-lg">Bỏ qua & Xem giả lập</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div class="absolute inset-0 pointer-events-none z-10 flex justify-between p-5">
+        
+        <!-- LEFT SIDEBAR -->
+        <div class="glass-panel w-[360px] h-full flex flex-col pointer-events-auto overflow-hidden">
+            <div class="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight">TCM 3D Anatomy</h1>
+                    <p class="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Knowledge Graph Engine</p>
+                </div>
+            </div>
+
+            <!-- TÌM KIẾM THÔNG MINH -->
+            <div class="p-5 border-b border-white/5 bg-white/[0.02] shrink-0">
+                <h3 class="text-[11px] font-semibold text-sky-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    Tra cứu Vị thuốc
+                </h3>
+                <div class="relative" id="search-container">
+                    <input type="text" id="search-input" autocomplete="off" placeholder="Gõ tên vị thuốc (VD: Bạch thược)..." class="w-full bg-black/60 border border-sky-500/30 rounded-lg pl-4 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-400 focus:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition placeholder-slate-500 font-medium">
+                    <ul id="search-suggestions" class="absolute z-50 w-full bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-lg mt-1 max-h-56 overflow-y-auto hidden shadow-2xl"></ul>
+                </div>
+            </div>
+
+            <div class="p-4 border-b border-white/5 shrink-0 bg-white/[0.01]">
+                <div class="flex justify-between items-center px-1 text-xs">
+                    <div class="flex flex-col"><span class="text-slate-500 font-medium">Vị thuốc</span><span id="stat-herbs" class="text-lg font-bold text-white leading-none mt-1">0</span></div>
+                    <div class="h-6 w-px bg-white/10"></div>
+                    <div class="flex flex-col text-right"><span class="text-slate-500 font-medium">Bài thuốc (CSDL)</span><span id="stat-prescriptions" class="text-lg font-bold text-emerald-400 leading-none mt-1">0</span></div>
+                </div>
+
+                <!-- Căn chỉnh Tạng Phủ (Gọn gàng) -->
+                <div class="mt-4 pt-3 border-t border-white/5">
+                    <h3 class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 flex justify-between">Căn chỉnh Tạng 3D <span class="text-sky-400 cursor-pointer" onclick="toggleAlignment()">[Sửa]</span></h3>
+                    <div id="alignment-tools" class="hidden space-y-2">
+                        <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Y-Offset</span><input type="range" id="organ-offset-y" min="-30" max="30" value="0" class="w-full h-1"></div>
+                        <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Scale</span><input type="range" id="organ-scale" min="0.5" max="2.5" step="0.1" value="1" class="w-full h-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Zone -->
+            <div id="filter-zone" class="flex-1 overflow-y-auto p-5">
+                <div class="mb-8">
+                    <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Phân Loại Tính Vị</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <label class="pill-checkbox cursor-pointer">
+                            <input type="checkbox" class="filter-tinh hidden" value="han">
+                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(59, 130, 246, 0.2); --active-border: rgba(59, 130, 246, 0.5);">
+                                <span class="w-2 h-2 rounded-full bg-blue-400"></span>Hàn / Lương
+                            </div>
+                        </label>
+                        <label class="pill-checkbox cursor-pointer">
+                            <input type="checkbox" class="filter-tinh hidden" value="nhiet">
+                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(239, 68, 68, 0.2); --active-border: rgba(239, 68, 68, 0.5);">
+                                <span class="w-2 h-2 rounded-full bg-red-400"></span>Ôn / Nhiệt
+                            </div>
+                        </label>
+                        <label class="pill-checkbox cursor-pointer">
+                            <input type="checkbox" class="filter-tinh hidden" value="binh">
+                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(34, 197, 94, 0.2); --active-border: rgba(34, 197, 94, 0.5);">
+                                <span class="w-2 h-2 rounded-full bg-green-400"></span>Tính Bình
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Quy Kinh Tác Động</h3>
+                        <button id="clear-kinh" class="text-[10px] text-slate-400 hover:text-white transition">Bỏ chọn</button>
+                    </div>
+                    <div id="kinh-filters" class="flex flex-wrap gap-1.5"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR: NODE DETAILS -->
+        <div id="info-panel" class="glass-panel w-[420px] h-full flex flex-col pointer-events-auto transition-transform duration-300 translate-x-[120%]">
+            <div class="p-5 border-b border-white/5 flex justify-between items-center shrink-0">
+                <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Hồ Sơ Y Lý
+                </h2>
+                <button onclick="closeInfo()" class="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="info-content" class="flex-1 overflow-y-auto p-6 text-sm text-slate-300 space-y-6"></div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleAlignment() {
+            document.getElementById('alignment-tools').classList.toggle('hidden');
+        }
+
+        // ==========================================
+        // 1. CƠ SỞ DỮ LIỆU ĐỘNG (Sẽ được fetch từ CSV)
+        // ==========================================
+        let PRESCRIPTIONS_DB = [];
+        let FORMULAS_DB = [];
+
+        function getPrescriptionsForHerb(herbName) {
+            const hNameLower = herbName.toLowerCase();
+            const matchedFormulas = FORMULAS_DB.filter(f => hNameLower.includes(f.herbName.toLowerCase()) || f.herbName.toLowerCase().includes(hNameLower));
+            const results = []; const seenIds = new Set();
+            
+            matchedFormulas.forEach(f => {
+                if (!seenIds.has(f.baiId)) {
+                    seenIds.add(f.baiId);
+                    const baiThuoc = PRESCRIPTIONS_DB.find(b => b.id === f.baiId);
+                    if (baiThuoc) results.push({ prescription: baiThuoc, dosage: f.dosage, note: f.note });
+                }
+            });
+            return results;
+        }
+
+        // ==========================================
+        // 2. STATE & GIẢI PHẪU Y KHOA
+        // ==========================================
+        let state = { searchQuery: "", activeTinh: [], activeKinh: [], focusedObj: null };
+
+        const ORGAN_COORDS = {
+            "Phế": new THREE.Vector3(0, 24, 0), "Tâm": new THREE.Vector3(2, 20, 3), "Tâm Bào": new THREE.Vector3(2, 20, 4),
+            "Can": new THREE.Vector3(-4, 12, 2), "Đởm": new THREE.Vector3(-3, 10, 3), "Tỳ": new THREE.Vector3(5, 12, -1),
+            "Vị": new THREE.Vector3(1, 10, 4), "Thận": new THREE.Vector3(0, 8, -5), "Đại Tràng": new THREE.Vector3(0, 4, 2),
+            "Tiểu Tràng": new THREE.Vector3(0, 1, 3), "Bàng Quang": new THREE.Vector3(0, -3, 4), "Tam Tiêu": new THREE.Vector3(0, 12, 0)
+        };
+
+        const ORGAN_NAMES = Object.keys(ORGAN_COORDS);
+        let herbMeshes = []; let linkMeshes = [];
+
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 30, 280);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.05;
+
+        // ÁNH SÁNG
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(50, 100, 50); scene.add(dirLight);
+        const backLight = new THREE.DirectionalLight(0x38bdf8, 1.5); backLight.position.set(-50, -20, -50); scene.add(backLight);
+
+        // ==========================================
+        // 3. TẠNG PHỦ
+        // ==========================================
+        const organSystemGroup = new THREE.Group();
+        scene.add(organSystemGroup);
+        
+        function createTextSprite(text, colorStr, fontSize = 28) {
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 64; const ctx = canvas.getContext('2d');
+            ctx.fillStyle = colorStr; ctx.font = `bold ${fontSize}px "Inter", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,1)'; ctx.shadowBlur = 6; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+            ctx.strokeText(text, 128, 32); ctx.fillText(text, 128, 32);
+            const texture = new THREE.CanvasTexture(canvas); texture.minFilter = THREE.LinearFilter;
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+            return new THREE.Sprite(spriteMat);
+        }
+
+        Object.keys(ORGAN_COORDS).forEach(org => {
+            const pos = ORGAN_COORDS[org];
+            const marker = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.8 }));
+            marker.position.copy(pos); marker.userData = { id: org, type: 'organ' }; 
+            
+            const sprite = createTextSprite(org, '#38bdf8', 36);
+            sprite.scale.set(8, 2, 1); sprite.position.set(0, 2, 0); marker.add(sprite); 
+            organSystemGroup.add(marker);
+        });
+
+        document.getElementById('organ-offset-y').addEventListener('input', (e) => { organSystemGroup.position.y = parseFloat(e.target.value); updateLinkPositions(); });
+        document.getElementById('organ-scale').addEventListener('input', (e) => { const s = parseFloat(e.target.value); organSystemGroup.scale.set(s, s, s); updateLinkPositions(); });
+
+        // ==========================================
+        // 4. QUẢN LÝ MÔ HÌNH CƠ THỂ
+        // ==========================================
+        const bodyGroup = new THREE.Group();
+        scene.add(bodyGroup);
+
+        function setupBodyModel(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshPhysicalMaterial({
+                        color: 0x38bdf8, metalness: 0.2, roughness: 0.1,
+                        transmission: 0.9, transparent: true, opacity: 0.25, side: THREE.DoubleSide
+                    });
+                }
+            });
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            const scaleFactor = 90 / size.y;
+            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            model.position.set(-center.x * scaleFactor, -center.y * scaleFactor, -center.z * scaleFactor);
+            
+            bodyGroup.clear(); bodyGroup.add(model);
+        }
+
+        function createDummyBody() {
+            const dummyBodyGeo = new THREE.CylinderGeometry(12, 10, 80, 32);
+            const dummyBodyMat = new THREE.MeshPhysicalMaterial({ color: 0x1e293b, transmission: 0.8, opacity: 1, transparent: true, roughness: 0.2 });
+            bodyGroup.add(new THREE.Mesh(dummyBodyGeo, dummyBodyMat));
+        }
+
+        // ==========================================
+        // 5. THUẬT TOÁN AUTO-LOAD DỮ LIỆU TỪ FOLDER
+        // ==========================================
+        const herbsGroup = new THREE.Group();
+        scene.add(herbsGroup);
+
+        // Khởi chạy khi load trang
+        window.onload = async function() {
+            try {
+                // 1. Tải Model 3D
+                const gltfLoader = new THREE.GLTFLoader();
+                gltfLoader.load('./human_body.glb', 
+                    (gltf) => { 
+                        setupBodyModel(gltf.scene); 
+                        document.getElementById('status-model').innerHTML = `<span>Mô hình 3D</span> <span class="text-green-400">Thành công ✓</span>`;
+                    }, 
+                    undefined, 
+                    (err) => { 
+                        console.warn("Không tìm thấy human_body.glb. Dùng giả lập."); createDummyBody(); 
+                        document.getElementById('status-model').innerHTML = `<span>Mô hình 3D</span> <span class="text-slate-400">Dùng giả lập</span>`;
+                    }
+                );
+
+                // 2. Tải đồng thời 3 file CSV
+                const [viThuocRes, baiThuocRes, congThucRes] = await Promise.all([
+                    fetch('./ViThuoc_final.csv'),
+                    fetch('./BaiThuoc.csv'),
+                    fetch('./CongThuc_Cleaned.csv')
+                ]);
+
+                if (!viThuocRes.ok) throw new Error("CORS/Missing ViThuoc");
+
+                const viThuocText = await viThuocRes.text();
+                const baiThuocText = await baiThuocRes.text();
+                const congThucText = await congThucRes.text();
+
+                // 3. Phân tích Dữ liệu Bài thuốc & Công thức
+                const rawBaiThuoc = d3.csvParse(baiThuocText);
+                PRESCRIPTIONS_DB = rawBaiThuoc.map(row => ({
+                    id: parseInt(row.ID_BaiThuoc),
+                    name: row.TenBaiThuoc,
+                    uses: row.ChuTri,
+                    origin: row.NguonGoc
+                }));
+
+                const rawCongThuc = d3.csvParse(congThucText);
+                FORMULAS_DB = rawCongThuc.map(row => ({
+                    baiId: parseInt(row.ID_BaiThuoc),
+                    herbName: row.TenViThuoc,
+                    dosage: row.LieuLuong,
+                    note: row.Ghi_chu_che_bien
+                }));
+
+                document.getElementById('status-baithuoc').innerHTML = `<span>Bài thuốc (CSDL)</span> <span class="text-green-400">${PRESCRIPTIONS_DB.length} bài ✓</span>`;
+                document.getElementById('stat-prescriptions').innerText = PRESCRIPTIONS_DB.length;
+
+                // 4. Vẽ Không gian Vị thuốc
+                const rawViThuoc = d3.csvParse(viThuocText);
+                processCSV(rawViThuoc);
+                document.getElementById('status-vithuoc').innerHTML = `<span>Vị thuốc</span> <span class="text-green-400">Thành công ✓</span>`;
+
+                // Thành công -> Đóng Loader
+                setTimeout(hideLoader, 1000);
+
+            } catch (error) {
+                console.error("Auto-load failed. Có thể do chạy file trực tiếp không qua HTTP server.", error);
+                document.getElementById('status-vithuoc').innerHTML = `<span>Vị thuốc</span> <span class="text-red-400">Lỗi CORS / Thiếu File</span>`;
+                document.getElementById('status-baithuoc').innerHTML = `<span>Bài thuốc</span> <span class="text-red-400">Lỗi CORS / Thiếu File</span>`;
+                document.getElementById('manual-fallback').classList.remove('hidden');
+                createDummyBody();
+            }
+        };
+
+        function hideLoader() {
+            const loader = document.getElementById('init-loader');
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 500);
+        }
+
+        // LOGIC DỰ PHÒNG (MANUAL UPLOAD) nếu Auto-load bị chặn bởi CORS
+        document.getElementById('fallback-glb').addEventListener('change', handleManualGLB);
+        document.getElementById('gltf-file').addEventListener('change', handleManualGLB);
+        
+        function handleManualGLB(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                new THREE.GLTFLoader().parse(event.target.result, '', function(gltf) { setupBodyModel(gltf.scene); });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        document.getElementById('fallback-csv').addEventListener('change', handleManualCSV);
+        document.getElementById('csv-file').addEventListener('change', handleManualCSV);
+
+        function handleManualCSV(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    processCSV(d3.csvParse(event.target.result));
+                    hideLoader();
+                } catch(err) { alert("Lỗi định dạng CSV"); }
+            };
+            reader.readAsText(file);
+        }
+
+        // ==========================================
+        // 6. XỬ LÝ VÀ VẼ ĐỒ THỊ
+        // ==========================================
+        function processCSV(rawData) {
+            herbsGroup.clear(); herbMeshes = []; linkMeshes = []; let mapDedup = new Map();
+
+            rawData.forEach(row => {
+                let ten = row['TenVietNam'] ? row['TenVietNam'].trim() : "";
+                if(!ten || mapDedup.has(ten)) return;
+                
+                let quyKinhRaw = row['QuyKinh'] ? row['QuyKinh'].toLowerCase() : "";
+                let targetNames = [];
+                ORGAN_NAMES.forEach(org => { if(quyKinhRaw.includes(org.toLowerCase())) targetNames.push(org); });
+
+                let tinhVi = row['TinhVi'] || ""; let group = "binh"; let color = 0x22c55e;
+                if(tinhVi.toLowerCase().includes("hàn") || tinhVi.toLowerCase().includes("lương")) { group = "han"; color = 0x3b82f6; }
+                else if(tinhVi.toLowerCase().includes("nhiệt") || tinhVi.toLowerCase().includes("ôn")) { group = "nhiet"; color = 0xef4444; }
+
+                mapDedup.set(ten, { id: ten, tinhVi: tinhVi, color: color, group: group, targetNames: targetNames, uses: row['CongDung'] || "" });
+            });
+
+            Array.from(mapDedup.values()).forEach((data, i) => {
+                const radius = 70 + Math.random() * 60; const theta = i * 137.5 * (Math.PI/180); const y = -50 + Math.random() * 100;
+                const x = radius * Math.cos(theta); const z = radius * Math.sin(theta);
+
+                const herbMat = new THREE.MeshStandardMaterial({ color: data.color, emissive: data.color, emissiveIntensity: 0.8, transparent: true, opacity: 1 });
+                const herbMesh = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), herbMat);
+                herbMesh.position.set(x, y, z);
+                herbMesh.userData = { type: 'herb', id: data.id, tinhVi: data.tinhVi, group: data.group, targetNames: data.targetNames, uses: data.uses };
+                
+                const herbLabel = createTextSprite(data.id, '#ffffff', 22);
+                herbLabel.position.set(0, 1.5, 0); herbLabel.scale.set(6, 1.5, 1); herbMesh.add(herbLabel); 
+
+                herbsGroup.add(herbMesh); herbMeshes.push(herbMesh);
+
+                data.targetNames.forEach(targetOrg => {
+                    const marker = organSystemGroup.children.find(c => c.userData && c.userData.id === targetOrg);
+                    if (marker) {
+                        const targetWorldPos = new THREE.Vector3(); marker.getWorldPosition(targetWorldPos);
+                        const pts = [new THREE.Vector3(x, y, z), targetWorldPos];
+                        const lineMat = new THREE.LineBasicMaterial({ color: data.color, transparent: true, opacity: 0.08 });
+                        const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
+                        line.userData = { type: 'link', source: data.id, target: targetOrg };
+                        herbsGroup.add(line); linkMeshes.push(line);
+                    }
+                });
+            });
+            applyFilters();
+        }
+
+        // ==========================================
+        // 7. THANH TÌM KIẾM THÔNG MINH (AUTOCOMPLETE)
+        // ==========================================
+        const searchInput = document.getElementById('search-input');
+        const searchSuggestions = document.getElementById('search-suggestions');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (query === "") {
+                searchSuggestions.classList.add('hidden');
+                resetFocus(); 
+            } else {
+                const matchedHerbs = herbMeshes.filter(m => m.userData.id.toLowerCase().includes(query)).map(m => m.userData.id);
+                if (matchedHerbs.length > 0) {
+                    searchSuggestions.innerHTML = matchedHerbs.slice(0, 15).map(name => 
+                        `<li class="px-4 py-2.5 hover:bg-sky-500/40 cursor-pointer text-sm font-medium text-slate-200 hover:text-white transition border-b border-white/5 last:border-0" onclick="selectSearchItem('${name}')">${name}</li>`
+                    ).join('');
+                    searchSuggestions.classList.remove('hidden');
+                } else {
+                    searchSuggestions.innerHTML = `<li class="px-4 py-2.5 text-sm text-slate-500 italic">Không tìm thấy vị thuốc...</li>`;
+                    searchSuggestions.classList.remove('hidden');
+                }
+            }
+        });
+
+        window.selectSearchItem = function(herbName) {
+            searchInput.value = herbName; searchSuggestions.classList.add('hidden');
+            state.searchQuery = ""; applyFilters(); 
+            const targetMesh = herbMeshes.find(m => m.userData.id === herbName);
+            if (targetMesh) focusOnObject(targetMesh);
+        };
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#search-container')) searchSuggestions.classList.add('hidden');
+        });
+
+        // ==========================================
+        // 8. RAYCASTING CHÍNH XÁC CAO (CLICK NODE)
+        // ==========================================
+        const raycaster = new THREE.Raycaster(); raycaster.params.Line.threshold = 1.5;
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener('click', (event) => {
+            if (event.target.closest('.glass-panel')) return;
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1; mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const interactables = [...organSystemGroup.children, ...herbMeshes.filter(m => m.visible)];
+            const intersects = raycaster.intersectObjects(interactables, true);
+            
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                if (obj.type === "Sprite" && obj.parent) obj = obj.parent;
+                focusOnObject(obj);
+            } else { closeInfo(); }
+        });
+
+        function focusOnObject(obj) {
+            state.focusedObj = obj;
+            const data = obj.userData;
+            const panel = document.getElementById('info-panel');
+            const content = document.getElementById('info-content');
+
+            herbMeshes.forEach(m => { m.material.opacity = 0.05; m.scale.set(1,1,1); });
+            linkMeshes.forEach(l => { l.material.opacity = 0.02; l.material.color.setHex(0xffffff); });
+
+            if (data.id && ORGAN_NAMES.includes(data.id)) {
+                const orgName = data.id; let herbCount = 0;
+                herbMeshes.forEach(m => {
+                    if (m.userData.targetNames.includes(orgName) && m.visible) { m.material.opacity = 1; m.scale.set(1.5, 1.5, 1.5); herbCount++; }
+                });
+                linkMeshes.forEach(l => {
+                    if (l.userData.target === orgName) {
+                        l.material.opacity = 0.8;
+                        const sourceNode = herbMeshes.find(h => h.userData.id === l.userData.source);
+                        if(sourceNode) l.material.color.setHex(sourceNode.userData.color);
+                    }
+                });
+
+                content.innerHTML = `
+                    <div class="mb-4">
+                        <span class="px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded text-[10px] uppercase font-bold tracking-widest">Tạng Phủ Kinh Lạc</span>
+                        <h3 class="text-3xl font-bold text-white mt-2">${orgName}</h3>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 rounded-xl p-4">
+                        <p class="text-sm text-slate-300">Ghi nhận <strong class="text-sky-400">${herbCount}</strong> vị thuốc đang hiển thị có tác động vào ${orgName}.</p>
+                    </div>
+                `;
+            } else if (data.type === 'herb') {
+                obj.material.opacity = 1; obj.scale.set(2.5, 2.5, 2.5);
+                linkMeshes.forEach(l => {
+                    if (l.userData.source === data.id) { l.material.opacity = 0.8; l.material.color.setHex(data.color); }
+                });
+
+                // TRÍCH XUẤT CÔNG THỨC (Từ 2 mảng Auto-load)
+                const relatedPrescriptions = getPrescriptionsForHerb(data.id);
+                let prescriptionsHTML = '';
+                
+                if (relatedPrescriptions.length > 0) {
+                    prescriptionsHTML = `
+                        <div class="mt-6 border-t border-white/10 pt-5">
+                            <h4 class="font-semibold text-slate-400 mb-4 text-[11px] uppercase tracking-widest flex items-center gap-2">
+                                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>
+                                Có trong Bài thuốc (${relatedPrescriptions.length})
+                            </h4>
+                            <div class="space-y-3">
+                                ${relatedPrescriptions.map(p => `
+                                    <div class="bg-black/40 p-4 rounded-xl border border-emerald-900/30 hover:border-emerald-500/50 transition">
+                                        <div class="text-emerald-300 font-bold text-sm mb-2 leading-tight">${p.prescription.name}</div>
+                                        <div class="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                                            <span class="bg-white/10 px-2 py-0.5 rounded text-white font-medium">Liều: ${p.dosage}</span>
+                                            ${p.note ? `<span class="italic">(${p.note})</span>` : ''}
+                                        </div>
+                                        <div class="text-xs text-slate-300 leading-relaxed bg-white/5 p-2 rounded-lg border border-white/5">${p.prescription.uses}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    prescriptionsHTML = `
+                        <div class="mt-6 border-t border-white/10 pt-5">
+                            <h4 class="font-semibold text-slate-500 mb-2 text-[11px] uppercase tracking-widest">Ứng dụng trong Bài thuốc</h4>
+                            <p class="text-xs text-slate-500 italic bg-white/5 p-3 rounded-lg border border-white/5">Chưa có thông tin bài thuốc chứa vị này trong CSDL.</p>
+                        </div>
+                    `;
+                }
+
+                let badgeClass = data.group === 'han' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : 
+                                 data.group === 'nhiet' ? 'bg-red-500/20 text-red-300 border-red-500/30' : 
+                                 'bg-green-500/20 text-green-300 border-green-500/30';
+
+                content.innerHTML = `
+                    <div class="mb-4">
+                        <span class="px-2.5 py-1 ${badgeClass} border rounded text-[10px] uppercase font-bold tracking-widest">Hồ Sơ Vị Thuốc</span>
+                        <h3 class="text-3xl font-bold text-white mt-3">${data.id}</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex gap-4">
+                            <div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/5">
+                                <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Tính Vị</h4>
+                                <p class="text-white text-sm font-medium">${data.tinhVi}</p>
+                            </div>
+                            <div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/5">
+                                <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Quy Kinh</h4>
+                                <p class="text-white text-sm font-medium truncate" title="${data.targetNames.join(', ')}">${data.targetNames.join(', ') || 'Không rõ'}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Công dụng & Chủ trị</h4>
+                            <p class="text-slate-300 text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/5">${data.uses || 'Chưa cập nhật'}</p>
+                        </div>
+                    </div>
+                    ${prescriptionsHTML}
+                `;
+            }
+            panel.classList.remove('translate-x-[120%]');
+        }
+
+        function closeInfo() {
+            state.focusedObj = null;
+            document.getElementById('info-panel').classList.add('translate-x-[120%]');
+            document.getElementById('search-input').value = "";
+            applyFilters();
+        }
+        window.closeInfo = closeInfo;
+
+        // ==========================================
+        // 9. ĐƯỜNG NỐI VÀ LỌC (FILTERS)
+        // ==========================================
+        function updateLinkPositions() {
+            linkMeshes.forEach(line => {
+                const marker = organSystemGroup.children.find(c => c.userData && c.userData.id === line.userData.target);
+                if (marker) {
+                    const newTargetPos = new THREE.Vector3(); marker.getWorldPosition(newTargetPos);
+                    const positions = line.geometry.attributes.position.array;
+                    positions[3] = newTargetPos.x; positions[4] = newTargetPos.y; positions[5] = newTargetPos.z;
+                    line.geometry.attributes.position.needsUpdate = true;
+                }
+            });
+        }
+
+        function applyFilters() {
+            if (state.focusedObj) { state.focusedObj = null; document.getElementById('info-panel').classList.add('translate-x-[120%]'); }
+            let vHerbs = 0; let vLinks = 0;
+
+            herbMeshes.forEach(mesh => {
+                const data = mesh.userData;
+                let matchTinh = state.activeTinh.length === 0 || state.activeTinh.includes(data.group);
+                let matchKinh = state.activeKinh.length === 0 || data.targetNames.some(t => state.activeKinh.includes(t));
+                mesh.visible = matchTinh && matchKinh;
+                if(mesh.visible) {
+                    vHerbs++;
+                    const isActiveFiltered = state.activeTinh.length > 0 || state.activeKinh.length > 0;
+                    mesh.material.opacity = isActiveFiltered ? 1 : 0.8;
+                    mesh.scale.set(isActiveFiltered ? 1.5 : 1, isActiveFiltered ? 1.5 : 1, isActiveFiltered ? 1.5 : 1);
+                }
+            });
+
+            linkMeshes.forEach(line => {
+                const hMesh = herbMeshes.find(m => m.userData.id === line.userData.source);
+                let isHerbVisible = hMesh ? hMesh.visible : false;
+                let matchKinh = state.activeKinh.length === 0 || state.activeKinh.includes(line.userData.target);
+                line.visible = isHerbVisible && matchKinh;
+                if(line.visible) {
+                    vLinks++;
+                    line.material.opacity = (state.activeKinh.length > 0) ? 0.6 : 0.03;
+                    if(hMesh) line.material.color.setHex(hMesh.userData.color); 
+                }
+            });
+
+            document.getElementById('stat-herbs').innerText = vHerbs;
+            document.getElementById('stat-links').innerText = vLinks;
+        }
+
+        const kinhContainer = document.getElementById('kinh-filters');
+        ORGAN_NAMES.forEach(org => {
+            const btn = document.createElement('button');
+            btn.className = "px-3 py-1.5 bg-white/5 border border-white/10 text-slate-300 rounded-lg text-xs font-medium hover:bg-white/10 transition";
+            btn.innerText = org;
+            btn.onclick = function() {
+                this.classList.toggle('bg-sky-500/20'); this.classList.toggle('border-sky-500/50'); this.classList.toggle('text-sky-300');
+                this.classList.toggle('bg-white/5'); this.classList.toggle('border-white/10'); this.classList.toggle('text-slate-300');
+                if (state.activeKinh.includes(org)) state.activeKinh = state.activeKinh.filter(k => k !== org);
+                else state.activeKinh.push(org);
+                applyFilters();
+            };
+            kinhContainer.appendChild(btn);
+        });
+
+        document.getElementById('clear-kinh').addEventListener('click', () => {
+            state.activeKinh = [];
+            Array.from(kinhContainer.children).forEach(btn => {
+                btn.className = "px-3 py-1.5 bg-white/5 border border-white/10 text-slate-300 rounded-lg text-xs font-medium hover:bg-white/10 transition";
+            });
+            applyFilters();
+        });
+
+        document.querySelectorAll('.filter-tinh').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                if(e.target.checked) state.activeTinh.push(e.target.value); else state.activeTinh = state.activeTinh.filter(v => v !== e.target.value);
+                applyFilters();
+            });
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            herbsGroup.rotation.y += 0.0015;
+            controls.update(); renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
