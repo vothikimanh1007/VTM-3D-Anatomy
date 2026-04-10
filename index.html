@@ -16,8 +16,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         body { margin: 0; overflow: hidden; background-color: #09090b; font-family: 'Inter', sans-serif; color: #f8fafc; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
         
+        /* Glassmorphism Panels */
         .glass-panel {
             background: rgba(9, 9, 11, 0.75);
             backdrop-filter: blur(20px);
@@ -51,136 +51,248 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.5s; backdrop-filter: blur(10px);
         }
+
+        /* Nền trang chủ (Background Animation) */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+        }
     </style>
 </head>
 <body>
 
-    <!-- MÀN HÌNH CHỜ AUTO-LOAD (CÓ PROGRESS BAR) -->
-    <div id="init-loader">
-        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight mb-2 animate-pulse">TCM Platform Engine</h1>
-        <p class="text-slate-400 text-sm mb-6">Đang tự động đồng bộ dữ liệu từ máy chủ...</p>
+    <!-- ========================================== -->
+    <!-- MÀN HÌNH 1: TRANG CHỦ (LANDING PAGE)       -->
+    <!-- ========================================== -->
+    <div id="landing-page" class="fixed inset-0 z-50 overflow-y-auto bg-[#09090b] text-slate-300">
+        <!-- Lưới nền trang trí -->
+        <div class="absolute inset-0 bg-grid pointer-events-none"></div>
         
-        <!-- Thanh Progress Bar -->
-        <div class="w-80 h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
-            <div id="progress-fill" class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 w-0 transition-all duration-200"></div>
-        </div>
-        <p id="progress-text" class="text-xs text-sky-400 font-medium mb-6 tracking-wider uppercase">Chuẩn bị...</p>
+        <!-- Vòng sáng trang trí -->
+        <div class="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-sky-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div class="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
 
-        <div class="text-xs text-slate-500 bg-white/5 p-4 rounded-xl border border-white/5 w-80">
-            <div class="flex justify-between mb-2" id="status-model"><span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400">Đợi...</span></div>
-            <div class="flex justify-between mb-2" id="status-csv"><span>2. Dữ liệu CSV</span> <span class="text-yellow-400">Đợi...</span></div>
-            <div class="flex justify-between" id="status-render"><span>3. Dựng hình 3D</span> <span class="text-yellow-400">Đợi...</span></div>
-        </div>
+        <div class="relative min-h-screen flex flex-col items-center justify-center p-6 sm:p-12">
+            
+            <div class="text-center max-w-4xl mx-auto mb-16">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs font-semibold tracking-widest text-sky-400 mb-6">
+                    <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span> HỆ THỐNG PHIÊN BẢN 2.0
+                </div>
+                <h1 class="text-5xl sm:text-6xl font-extrabold text-white tracking-tight mb-6 leading-tight">
+                    Nền tảng Khai phá Tri thức <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400">Y Học Cổ Truyền</span>
+                </h1>
+                <p class="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                    Hệ thống số hóa và mô phỏng tương tác 3D đa chiều, liên kết 714 Vị thuốc, hàng trăm Bài thuốc và Hệ thống 12 Tạng Phủ Giải phẫu học.
+                </p>
+            </div>
 
-        <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
-            <p class="text-red-400 text-xs text-center font-bold">⚠️ Tải tự động thất bại (Bị chặn CORS hoặc lỗi File).</p>
-            <p class="text-slate-400 text-xs text-center mb-2">Vui lòng nạp các file dữ liệu theo cách thủ công bên dưới:</p>
-            <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600 transition">
-                <span>Tải Cơ thể 3D (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
-            </label>
-            <label class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-blue-500/50 transition">
-                <span>Tải ViThuoc_final.csv</span> <input type="file" id="fallback-csv" accept=".csv" class="hidden">
-            </label>
-            <button onclick="hideLoader()" class="bg-white/10 hover:bg-white/20 text-white text-sm py-2 rounded-lg transition mt-2">Bỏ qua & Vào hệ thống</button>
+            <!-- Các Phân hệ (Modules) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+                
+                <!-- Module 1: 3D Anatomy (Active) -->
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-sky-500/50 transition-all duration-300 group cursor-pointer relative overflow-hidden" onclick="start3DApp()">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all"></div>
+                    <div class="w-12 h-12 bg-sky-500/20 rounded-xl flex items-center justify-center mb-6 border border-sky-500/30 text-sky-400 group-hover:scale-110 transition-transform">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3">Không gian Giải phẫu 3D</h2>
+                    <p class="text-sm text-slate-400 mb-8 leading-relaxed">
+                        Khám phá quỹ đạo quy kinh của các vị thuốc trên mô hình cơ thể người thực tế. Căn chỉnh trực quan, lọc dược tính thời gian thực.
+                    </p>
+                    <button class="flex items-center gap-2 text-sky-400 font-semibold group-hover:text-sky-300">
+                        Khởi động Phân hệ <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Module 2: Dashboard 2D (Coming Soon) -->
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-8 opacity-60 cursor-not-allowed relative overflow-hidden">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/30 text-emerald-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-3">Dashboard Thống kê (2D)</h2>
+                    <p class="text-sm text-slate-400 mb-8 leading-relaxed">
+                        Sơ đồ mạng lưới Network Graph phẳng. Thích hợp để in ấn và xuất báo cáo PDF cho tạp chí.
+                    </p>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 rounded text-xs font-medium text-slate-400">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Sắp ra mắt
+                    </span>
+                </div>
+
+            </div>
+            
+            <footer class="mt-20 text-center text-xs text-slate-600">
+                &copy; 2026 Hệ thống Nghiên cứu Khoa học Dữ liệu YHCT.
+            </footer>
         </div>
     </div>
 
-    <div id="canvas-container"></div>
-
-    <!-- UI Layer -->
-    <div class="absolute inset-0 pointer-events-none z-10 flex justify-between p-5">
+    <!-- ========================================== -->
+    <!-- MÀN HÌNH 2: KHÔNG GIAN 3D (APP WORKSPACE)  -->
+    <!-- ========================================== -->
+    <div id="app-workspace" class="hidden absolute inset-0">
         
-        <!-- LEFT SIDEBAR -->
-        <div class="glass-panel w-[360px] h-full flex flex-col pointer-events-auto overflow-hidden">
-            <div class="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
-                <div>
-                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight">TCM 3D Anatomy</h1>
-                    <p class="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Knowledge Graph Engine</p>
-                </div>
+        <!-- MÀN HÌNH CHỜ AUTO-LOAD (CÓ PROGRESS BAR) -->
+        <div id="init-loader">
+            <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight mb-2 animate-pulse">TCM Platform Engine</h1>
+            <p class="text-slate-400 text-sm mb-6">Đang tự động đồng bộ dữ liệu từ máy chủ...</p>
+            
+            <!-- Thanh Progress Bar -->
+            <div class="w-80 h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
+                <div id="progress-fill" class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 w-0 transition-all duration-200"></div>
+            </div>
+            <p id="progress-text" class="text-xs text-sky-400 font-medium mb-6 tracking-wider uppercase">Chuẩn bị không gian...</p>
+
+            <div class="text-xs text-slate-500 bg-white/5 p-4 rounded-xl border border-white/5 w-80">
+                <div class="flex justify-between mb-2" id="status-model"><span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400">Đợi...</span></div>
+                <div class="flex justify-between mb-2" id="status-csv"><span>2. Dữ liệu CSV</span> <span class="text-yellow-400">Đợi...</span></div>
+                <div class="flex justify-between" id="status-render"><span>3. Dựng hình 3D</span> <span class="text-yellow-400">Đợi...</span></div>
             </div>
 
-            <!-- TÌM KIẾM THÔNG MINH -->
-            <div class="p-5 border-b border-white/5 bg-white/[0.02] shrink-0">
-                <h3 class="text-[11px] font-semibold text-sky-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    Tra cứu Vị thuốc
-                </h3>
-                <div class="relative" id="search-container">
-                    <input type="text" id="search-input" autocomplete="off" placeholder="Gõ tên vị thuốc (VD: Bạch thược)..." class="w-full bg-black/60 border border-sky-500/30 rounded-lg pl-4 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-400 focus:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition placeholder-slate-500 font-medium">
-                    <ul id="search-suggestions" class="absolute z-50 w-full bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-lg mt-1 max-h-56 overflow-y-auto hidden shadow-2xl"></ul>
-                </div>
-            </div>
-
-            <div class="p-4 border-b border-white/5 shrink-0 bg-white/[0.01]">
-                <div class="flex justify-between items-center px-1 text-xs">
-                    <div class="flex flex-col"><span class="text-slate-500 font-medium">Vị thuốc đang hiện</span><span id="stat-herbs" class="text-lg font-bold text-white leading-none mt-1">0</span></div>
-                    <div class="h-6 w-px bg-white/10"></div>
-                    <div class="flex flex-col text-right"><span class="text-slate-500 font-medium">Bài thuốc (CSDL)</span><span id="stat-prescriptions" class="text-lg font-bold text-emerald-400 leading-none mt-1">0</span></div>
-                </div>
-
-                <!-- Căn chỉnh Tạng Phủ -->
-                <div class="mt-4 pt-3 border-t border-white/5">
-                    <h3 class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 flex justify-between">Căn chỉnh Tạng 3D <span class="text-sky-400 cursor-pointer" onclick="toggleAlignment()">[Sửa]</span></h3>
-                    <div id="alignment-tools" class="hidden space-y-2">
-                        <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Y-Offset</span><input type="range" id="organ-offset-y" min="-30" max="30" value="0" class="w-full h-1"></div>
-                        <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Scale</span><input type="range" id="organ-scale" min="0.5" max="2.5" step="0.1" value="1" class="w-full h-1"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filters Zone -->
-            <div id="filter-zone" class="flex-1 overflow-y-auto p-5">
-                <div class="mb-8">
-                    <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Phân Loại Tính Vị</h3>
-                    <div class="flex flex-wrap gap-2">
-                        <label class="pill-checkbox cursor-pointer">
-                            <input type="checkbox" class="filter-tinh hidden" value="han">
-                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(59, 130, 246, 0.2); --active-border: rgba(59, 130, 246, 0.5);">
-                                <span class="w-2 h-2 rounded-full bg-blue-400"></span>Hàn / Lương
-                            </div>
-                        </label>
-                        <label class="pill-checkbox cursor-pointer">
-                            <input type="checkbox" class="filter-tinh hidden" value="nhiet">
-                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(239, 68, 68, 0.2); --active-border: rgba(239, 68, 68, 0.5);">
-                                <span class="w-2 h-2 rounded-full bg-red-400"></span>Ôn / Nhiệt
-                            </div>
-                        </label>
-                        <label class="pill-checkbox cursor-pointer">
-                            <input type="checkbox" class="filter-tinh hidden" value="binh">
-                            <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(34, 197, 94, 0.2); --active-border: rgba(34, 197, 94, 0.5);">
-                                <span class="w-2 h-2 rounded-full bg-green-400"></span>Tính Bình
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Quy Kinh Tác Động</h3>
-                        <button id="clear-kinh" class="text-[10px] text-slate-400 hover:text-white transition">Bỏ chọn</button>
-                    </div>
-                    <div id="kinh-filters" class="flex flex-wrap gap-1.5"></div>
-                </div>
+            <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
+                <p class="text-red-400 text-xs text-center font-bold">⚠️ Tải tự động thất bại (Bị chặn CORS hoặc lỗi File).</p>
+                <p class="text-slate-400 text-xs text-center mb-2">Vui lòng nạp các file dữ liệu theo cách thủ công bên dưới:</p>
+                <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600 transition">
+                    <span>Tải Cơ thể 3D (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
+                </label>
+                <label class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-blue-500/50 transition">
+                    <span>Tải ViThuoc_final.csv</span> <input type="file" id="fallback-csv" accept=".csv" class="hidden">
+                </label>
             </div>
         </div>
 
-        <!-- RIGHT SIDEBAR: NODE DETAILS -->
-        <div id="info-panel" class="glass-panel w-[420px] h-full flex flex-col pointer-events-auto transition-transform duration-300 translate-x-[120%]">
-            <div class="p-5 border-b border-white/5 flex justify-between items-center shrink-0">
-                <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Hồ Sơ Y Lý
-                </h2>
-                <button onclick="closeInfo()" class="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div id="info-content" class="flex-1 overflow-y-auto p-6 text-sm text-slate-300 space-y-6"></div>
-        </div>
+        <div id="canvas-container"></div>
 
+        <!-- UI Layer -->
+        <div class="absolute inset-0 pointer-events-none z-10 flex justify-between p-5">
+            
+            <!-- LEFT SIDEBAR -->
+            <div class="glass-panel w-[360px] h-full flex flex-col pointer-events-auto overflow-hidden">
+                <div class="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
+                    <div>
+                        <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight">TCM 3D Anatomy</h1>
+                        <p class="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Knowledge Graph Engine</p>
+                    </div>
+                    <!-- Nút thoát ra Trang chủ -->
+                    <button onclick="returnToHome()" class="p-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg transition" title="Về trang chủ">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    </button>
+                </div>
+
+                <!-- TÌM KIẾM THÔNG MINH -->
+                <div class="p-5 border-b border-white/5 bg-white/[0.02] shrink-0">
+                    <h3 class="text-[11px] font-semibold text-sky-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        Tra cứu Vị thuốc
+                    </h3>
+                    <div class="relative" id="search-container">
+                        <input type="text" id="search-input" autocomplete="off" placeholder="Gõ tên vị thuốc (VD: Bạch thược)..." class="w-full bg-black/60 border border-sky-500/30 rounded-lg pl-4 pr-4 py-3 text-sm text-white focus:outline-none focus:border-sky-400 focus:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition placeholder-slate-500 font-medium">
+                        <ul id="search-suggestions" class="absolute z-50 w-full bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-lg mt-1 max-h-56 overflow-y-auto hidden shadow-2xl"></ul>
+                    </div>
+                </div>
+
+                <div class="p-4 border-b border-white/5 shrink-0 bg-white/[0.01]">
+                    <div class="flex justify-between items-center px-1 text-xs">
+                        <div class="flex flex-col"><span class="text-slate-500 font-medium">Vị thuốc đang hiện</span><span id="stat-herbs" class="text-lg font-bold text-white leading-none mt-1">0</span></div>
+                        <div class="h-6 w-px bg-white/10"></div>
+                        <div class="flex flex-col text-right"><span class="text-slate-500 font-medium">Bài thuốc (CSDL)</span><span id="stat-prescriptions" class="text-lg font-bold text-emerald-400 leading-none mt-1">0</span></div>
+                    </div>
+
+                    <!-- Căn chỉnh Tạng Phủ -->
+                    <div class="mt-4 pt-3 border-t border-white/5">
+                        <h3 class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 flex justify-between">Căn chỉnh Tạng 3D <span class="text-sky-400 cursor-pointer" onclick="toggleAlignment()">[Sửa]</span></h3>
+                        <div id="alignment-tools" class="hidden space-y-2">
+                            <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Y-Offset</span><input type="range" id="organ-offset-y" min="-30" max="30" value="0" class="w-full h-1"></div>
+                            <div class="flex items-center gap-3"><span class="text-[10px] text-slate-500 w-12">Scale</span><input type="range" id="organ-scale" min="0.5" max="2.5" step="0.1" value="1" class="w-full h-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters Zone -->
+                <div id="filter-zone" class="flex-1 overflow-y-auto p-5">
+                    <div class="mb-8">
+                        <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Phân Loại Tính Vị</h3>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="pill-checkbox cursor-pointer">
+                                <input type="checkbox" class="filter-tinh hidden" value="han">
+                                <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(59, 130, 246, 0.2); --active-border: rgba(59, 130, 246, 0.5);">
+                                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>Hàn / Lương
+                                </div>
+                            </label>
+                            <label class="pill-checkbox cursor-pointer">
+                                <input type="checkbox" class="filter-tinh hidden" value="nhiet">
+                                <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(239, 68, 68, 0.2); --active-border: rgba(239, 68, 68, 0.5);">
+                                    <span class="w-2 h-2 rounded-full bg-red-400"></span>Ôn / Nhiệt
+                                </div>
+                            </label>
+                            <label class="pill-checkbox cursor-pointer">
+                                <input type="checkbox" class="filter-tinh hidden" value="binh">
+                                <div class="px-3 py-1.5 rounded-lg border border-white/5 bg-white/5 text-xs font-medium text-slate-300 transition-all hover:bg-white/10 flex items-center gap-1.5" style="--active-bg: rgba(34, 197, 94, 0.2); --active-border: rgba(34, 197, 94, 0.5);">
+                                    <span class="w-2 h-2 rounded-full bg-green-400"></span>Tính Bình
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">Quy Kinh Tác Động</h3>
+                            <button id="clear-kinh" class="text-[10px] text-slate-400 hover:text-white transition">Bỏ chọn</button>
+                        </div>
+                        <div id="kinh-filters" class="flex flex-wrap gap-1.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDEBAR: NODE DETAILS -->
+            <div id="info-panel" class="glass-panel w-[420px] h-full flex flex-col pointer-events-auto transition-transform duration-300 translate-x-[120%]">
+                <div class="p-5 border-b border-white/5 flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Hồ Sơ Y Lý
+                    </h2>
+                    <button onclick="closeInfo()" class="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div id="info-content" class="flex-1 overflow-y-auto p-6 text-sm text-slate-300 space-y-6"></div>
+            </div>
+
+        </div>
     </div>
 
     <script>
+        // ==========================================
+        // KHỐI ĐIỀU CHUYỂN MÀN HÌNH (SPA ROUTING)
+        // ==========================================
+        let hasInitialized3D = false;
+        let animationId = null;
+
+        function start3DApp() {
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('app-workspace').classList.remove('hidden');
+            
+            // Kích hoạt load dữ liệu nếu là lần đầu tiên mở
+            if (!hasInitialized3D) {
+                init3DEnvironment();
+                triggerAutoLoad();
+                hasInitialized3D = true;
+            } else {
+                // Khôi phục animate loop nếu đã vào trước đó
+                animate();
+            }
+        }
+
+        function returnToHome() {
+            document.getElementById('app-workspace').classList.add('hidden');
+            document.getElementById('landing-page').classList.remove('hidden');
+            // Đóng băng GPU render để tiết kiệm tài nguyên khi ở ngoài Trang chủ
+            if(animationId) cancelAnimationFrame(animationId);
+        }
+
         function toggleAlignment() {
             document.getElementById('alignment-tools').classList.toggle('hidden');
         }
@@ -223,32 +335,62 @@
         const ORGAN_NAMES = Object.keys(ORGAN_COORDS);
         let herbMeshes = []; let linkMeshes = [];
 
-        // ==========================================
-        // 2. KHỞI TẠO ENGINE THREE.JS
-        // ==========================================
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
-        camera.position.set(0, 30, 280);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        container.appendChild(renderer.domElement);
-
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true; controls.dampingFactor = 0.05;
-
-        // ÁNH SÁNG
-        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(50, 100, 50); scene.add(dirLight);
-        const backLight = new THREE.DirectionalLight(0x38bdf8, 1.5); backLight.position.set(-50, -20, -50); scene.add(backLight);
+        // Các biến toàn cục của Three.js
+        let scene, camera, renderer, controls;
+        let organSystemGroup, bodyGroup, herbsGroup;
 
         // ==========================================
-        // 3. TẠNG PHỦ VÀ HÀM TẠO NHÃN CHỮ
+        // 2. KHỞI TẠO ENGINE THREE.JS (Chỉ chạy khi bấm Start)
         // ==========================================
-        const organSystemGroup = new THREE.Group();
-        scene.add(organSystemGroup);
+        function init3DEnvironment() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(0, 30, 280);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; controls.dampingFactor = 0.05;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(50, 100, 50); scene.add(dirLight);
+            const backLight = new THREE.DirectionalLight(0x38bdf8, 1.5); backLight.position.set(-50, -20, -50); scene.add(backLight);
+
+            // Tạng Phủ
+            organSystemGroup = new THREE.Group();
+            scene.add(organSystemGroup);
+            
+            Object.keys(ORGAN_COORDS).forEach(org => {
+                const pos = ORGAN_COORDS[org];
+                const marker = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.8 }));
+                marker.position.copy(pos); marker.userData = { id: org, type: 'organ' }; 
+                
+                const sprite = createTextSprite(org, '#38bdf8', true);
+                sprite.scale.set(8, 2, 1); sprite.position.set(0, 2, 0); marker.add(sprite); 
+                organSystemGroup.add(marker);
+            });
+
+            document.getElementById('organ-offset-y').addEventListener('input', (e) => { organSystemGroup.position.y = parseFloat(e.target.value); updateLinkPositions(); });
+            document.getElementById('organ-scale').addEventListener('input', (e) => { const s = parseFloat(e.target.value); organSystemGroup.scale.set(s, s, s); updateLinkPositions(); });
+
+            bodyGroup = new THREE.Group();
+            scene.add(bodyGroup);
+
+            herbsGroup = new THREE.Group();
+            scene.add(herbsGroup);
+
+            window.addEventListener('resize', () => {
+                if(!camera || !renderer) return;
+                camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate();
+        }
         
         function createTextSprite(text, colorStr, isOrgan = false) {
             const canvas = document.createElement('canvas'); 
@@ -271,22 +413,6 @@
             const spriteMat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
             return new THREE.Sprite(spriteMat);
         }
-
-        Object.keys(ORGAN_COORDS).forEach(org => {
-            const pos = ORGAN_COORDS[org];
-            const marker = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.8 }));
-            marker.position.copy(pos); marker.userData = { id: org, type: 'organ' }; 
-            
-            const sprite = createTextSprite(org, '#38bdf8', true);
-            sprite.scale.set(8, 2, 1); sprite.position.set(0, 2, 0); marker.add(sprite); 
-            organSystemGroup.add(marker);
-        });
-
-        document.getElementById('organ-offset-y').addEventListener('input', (e) => { organSystemGroup.position.y = parseFloat(e.target.value); updateLinkPositions(); });
-        document.getElementById('organ-scale').addEventListener('input', (e) => { const s = parseFloat(e.target.value); organSystemGroup.scale.set(s, s, s); updateLinkPositions(); });
-
-        const bodyGroup = new THREE.Group();
-        scene.add(bodyGroup);
 
         function setupBodyModel(model) {
             model.traverse((child) => {
@@ -314,12 +440,9 @@
         }
 
         // ==========================================
-        // 4. LUỒNG TẢI DỮ LIỆU CHỐNG BOM (BOM-PROOF) & CỤC BỘ
+        // 4. LUỒNG TẢI DỮ LIỆU ĐƯỢC GỌI TỪ NÚT START
         // ==========================================
-        const herbsGroup = new THREE.Group();
-        scene.add(herbsGroup);
-
-        window.onload = function() {
+        function triggerAutoLoad() {
             document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400 animate-pulse">Đang tải...</span>`;
             
             const gltfLoader = new THREE.GLTFLoader();
@@ -345,7 +468,7 @@
                     loadCSVData();
                 }
             );
-        };
+        }
 
         async function loadCSVData() {
             document.getElementById('progress-text').innerText = `Tải Dữ liệu Y học...`;
@@ -366,7 +489,6 @@
 
                 document.getElementById('progress-fill').style.width = '60%';
 
-                // Parse Bài Thuốc (Chống BOM lỗi font cột)
                 const rawBaiThuoc = d3.csvParse(baiThuocText);
                 PRESCRIPTIONS_DB = rawBaiThuoc.map(row => {
                     const keys = Object.keys(row);
@@ -382,7 +504,6 @@
                     };
                 });
 
-                // Parse Công thức
                 const rawCongThuc = d3.csvParse(congThucText);
                 FORMULAS_DB = rawCongThuc.map(row => {
                     const keys = Object.keys(row);
@@ -405,7 +526,6 @@
                 processCSVChunked(rawViThuoc);
 
             } catch (error) {
-                // FALLBACK KHI CHẠY LOCAL FILE:/// BỊ CHẶN CORS HOẶC KHÔNG TÌM THẤY TRÊN GITHUB
                 document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-red-400">Bị chặn / Lỗi File</span>`;
                 document.getElementById('manual-fallback').classList.remove('hidden');
                 document.getElementById('progress-text').innerText = `Vui lòng sử dụng tính năng tải thủ công.`;
@@ -413,7 +533,7 @@
         }
 
         // ==========================================
-        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING) & BOM PROOF
+        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING)
         // ==========================================
         function processCSVChunked(rawData) {
             document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span id="render-percent" class="text-yellow-400 animate-pulse">0%</span>`;
@@ -421,7 +541,6 @@
             herbsGroup.clear(); herbMeshes = []; linkMeshes = []; 
             let mapDedup = new Map();
 
-            // Lọc dữ liệu chống rác Excel BOM (BOM-PROOF)
             rawData.forEach(row => {
                 const keys = Object.keys(row);
                 const tenKey = keys.find(k => k.toLowerCase().includes('tenvietnam') || k.toLowerCase().includes('tên'));
@@ -446,11 +565,9 @@
 
             const validHerbs = Array.from(mapDedup.values());
             
-            // Xử lý báo lỗi nếu file CSV hoàn toàn không có dữ liệu
             if(validHerbs.length === 0) {
-                alert("Hệ thống không tìm thấy vị thuốc nào! Vui lòng kiểm tra lại file CSV của bạn xem có cột 'TenVietNam' không.");
-                hideLoader();
-                return;
+                alert("Hệ thống không tìm thấy vị thuốc nào! Vui lòng kiểm tra lại file CSV.");
+                hideLoader(); return;
             }
             
             let currentIndex = 0;
@@ -532,12 +649,8 @@
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
             reader.onload = (evt) => { 
-                try {
-                    processCSVChunked(d3.csvParse(evt.target.result)); 
-                    hideLoader();
-                } catch(e) {
-                    alert("Có lỗi trong lúc xử lý file CSV. Xin vui lòng kiểm tra lại cấu trúc file.");
-                }
+                try { processCSVChunked(d3.csvParse(evt.target.result)); hideLoader(); } 
+                catch(e) { alert("Có lỗi trong lúc xử lý file CSV."); }
             };
             reader.readAsText(file);
         });
@@ -585,7 +698,9 @@
         const mouse = new THREE.Vector2();
 
         window.addEventListener('click', (event) => {
-            if (event.target.closest('.glass-panel')) return;
+            if (event.target.closest('.glass-panel') || event.target.closest('#landing-page')) return;
+            if (!camera || !scene) return;
+            
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1; mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
@@ -603,12 +718,10 @@
             state.focusedObj = obj; const data = obj.userData;
             const panel = document.getElementById('info-panel'); const content = document.getElementById('info-content');
 
-            // Ẩn tất cả và ẩn toàn bộ Link
             herbMeshes.forEach(m => { m.material.transparent = true; m.material.opacity = 0.05; m.scale.set(1,1,1); });
             linkMeshes.forEach(l => { l.visible = false; });
 
             if (data.id && ORGAN_NAMES.includes(data.id)) {
-                // Focus Tạng Phủ
                 const orgName = data.id; let herbCount = 0;
                 herbMeshes.forEach(m => { 
                     if (m.userData.targetNames.includes(orgName) && m.visible) { 
@@ -625,7 +738,6 @@
 
                 content.innerHTML = `<div class="mb-4"><span class="px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded text-[10px] uppercase font-bold tracking-widest">Tạng Phủ Kinh Lạc</span><h3 class="text-3xl font-bold text-white mt-2">${orgName}</h3></div><div class="bg-white/5 border border-white/10 rounded-xl p-4"><p class="text-sm text-slate-300">Ghi nhận <strong class="text-sky-400">${herbCount}</strong> vị thuốc đang hiển thị có tác động vào ${orgName}.</p></div>`;
             } else if (data.type === 'herb') {
-                // Focus Vị Thuốc
                 obj.material.transparent = false; obj.material.opacity = 1; obj.scale.set(2.5, 2.5, 2.5);
                 linkMeshes.forEach(l => { 
                     if (l.userData.source === data.id) { 
@@ -663,7 +775,6 @@
         function applyFilters() {
             if (state.focusedObj) { state.focusedObj = null; document.getElementById('info-panel').classList.add('translate-x-[120%]'); }
             
-            // MAP để tra cứu nhanh lưới Vị thuốc (Chống lag khi có hàng ngàn link)
             const herbMeshMap = new Map();
             herbMeshes.forEach(mesh => herbMeshMap.set(mesh.userData.id, mesh));
 
@@ -730,16 +841,11 @@
         });
 
         function animate() {
-            requestAnimationFrame(animate);
-            herbsGroup.rotation.y += 0.0015;
-            controls.update(); renderer.render(scene, camera);
+            animationId = requestAnimationFrame(animate);
+            if(herbsGroup) herbsGroup.rotation.y += 0.0015;
+            if(controls) controls.update(); 
+            if(renderer && scene && camera) renderer.render(scene, camera);
         }
-        animate();
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
     </script>
 </body>
 </html>
