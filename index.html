@@ -112,7 +112,7 @@
 
             <div class="p-4 border-b border-white/5 shrink-0 bg-white/[0.01]">
                 <div class="flex justify-between items-center px-1 text-xs">
-                    <div class="flex flex-col"><span class="text-slate-500 font-medium">Vị thuốc</span><span id="stat-herbs" class="text-lg font-bold text-white leading-none mt-1">0</span></div>
+                    <div class="flex flex-col"><span class="text-slate-500 font-medium">Vị thuốc đang hiện</span><span id="stat-herbs" class="text-lg font-bold text-white leading-none mt-1">0</span></div>
                     <div class="h-6 w-px bg-white/10"></div>
                     <div class="flex flex-col text-right"><span class="text-slate-500 font-medium">Bài thuốc (CSDL)</span><span id="stat-prescriptions" class="text-lg font-bold text-emerald-400 leading-none mt-1">0</span></div>
                 </div>
@@ -233,18 +233,17 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true; controls.dampingFactor = 0.05;
 
+        // ÁNH SÁNG
         scene.add(new THREE.AmbientLight(0xffffff, 0.6));
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(50, 100, 50); scene.add(dirLight);
         const backLight = new THREE.DirectionalLight(0x38bdf8, 1.5); backLight.position.set(-50, -20, -50); scene.add(backLight);
 
         // ==========================================
-        // 3. TẠNG PHỦ VÀ HÀM TẠO NHÃN CHỮ (TỐI ƯU HÓA VRAM)
+        // 3. TẠNG PHỦ VÀ HÀM TẠO NHÃN CHỮ
         // ==========================================
         const organSystemGroup = new THREE.Group();
         scene.add(organSystemGroup);
         
-        // Hàm tạo TextSprite được TỐI ƯU HÓA KÍCH THƯỚC:
-        // Tạng phủ dùng canvas to (256x64) để nét. Thuốc dùng canvas nhỏ (128x32) tiết kiệm RAM.
         function createTextSprite(text, colorStr, isOrgan = false) {
             const canvas = document.createElement('canvas'); 
             canvas.width = isOrgan ? 256 : 128; 
@@ -309,7 +308,7 @@
         }
 
         // ==========================================
-        // 4. LUỒNG TẢI DỮ LIỆU ĐA TIẾN TRÌNH & CHUNKING (CỐT LÕI TỐI ƯU TỐC ĐỘ)
+        // 4. LUỒNG TẢI DỮ LIỆU ĐA TIẾN TRÌNH & CHUNKING (TỐI ƯU CHỐNG ĐƠ TRÌNH DUYỆT)
         // ==========================================
         const herbsGroup = new THREE.Group();
         scene.add(herbsGroup);
@@ -324,11 +323,11 @@
                     setupBodyModel(gltf.scene); 
                     document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D (.glb)</span> <span class="text-green-400">Thành công ✓</span>`;
                     document.getElementById('progress-fill').style.width = '40%';
-                    loadCSVData(); // Tải 3D xong mới tải CSV để tránh nghẽn băng thông
+                    loadCSVData(); 
                 }, 
                 (xhr) => {
                     if (xhr.total > 0) {
-                        const percent = Math.floor((xhr.loaded / xhr.total) * 40); // 40% đầu cho 3D model
+                        const percent = Math.floor((xhr.loaded / xhr.total) * 40);
                         document.getElementById('progress-fill').style.width = `${percent}%`;
                         document.getElementById('progress-text').innerText = `Tải mô hình 3D... ${Math.floor((xhr.loaded / xhr.total) * 100)}%`;
                     }
@@ -387,7 +386,7 @@
         }
 
         // ==========================================
-        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING) GIÚP CHỐNG ĐƠ MÁY
+        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING) & TỐI ƯU VRAM
         // ==========================================
         function processCSVChunked(rawData) {
             document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span id="render-percent" class="text-yellow-400 animate-pulse">0%</span>`;
@@ -413,7 +412,10 @@
             const validHerbs = Array.from(mapDedup.values());
             
             let currentIndex = 0;
-            const chunkSize = 40; // Xử lý 40 vị thuốc mỗi frame để đảm bảo 60 FPS
+            const chunkSize = 20; // Giảm chunk size xuống 20 để UI tuyệt đối không bị giật
+
+            // TỐI ƯU 1: GỘP HÌNH HỌC (Geometry Pooling) để tiết kiệm RAM
+            const sharedHerbGeo = new THREE.SphereGeometry(1.0, 12, 12);
 
             function renderChunk() {
                 const chunk = validHerbs.slice(currentIndex, currentIndex + chunkSize);
@@ -423,14 +425,14 @@
                     const radius = 70 + Math.random() * 60; const theta = i * 137.5 * (Math.PI/180); const y = -50 + Math.random() * 100;
                     const x = radius * Math.cos(theta); const z = radius * Math.sin(theta);
 
-                    const herbMat = new THREE.MeshStandardMaterial({ color: data.color, emissive: data.color, emissiveIntensity: 0.8, transparent: true, opacity: 1 });
-                    const herbMesh = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), herbMat);
+                    // TỐI ƯU 2: Bỏ transparent mặc định, giúp GPU không phải Render Sort
+                    const herbMat = new THREE.MeshStandardMaterial({ color: data.color, emissive: data.color, emissiveIntensity: 0.8 });
+                    const herbMesh = new THREE.Mesh(sharedHerbGeo, herbMat);
                     herbMesh.position.set(x, y, z);
-                    herbMesh.userData = { type: 'herb', id: data.id, tinhVi: data.tinhVi, group: data.group, targetNames: data.targetNames, uses: data.uses };
+                    herbMesh.userData = { type: 'herb', id: data.id, tinhVi: data.tinhVi, group: data.group, targetNames: data.targetNames, uses: data.uses, color: data.color };
                     
-                    // Sử dụng Canvas thu nhỏ (isOrgan = false) để tiết kiệm RAM
                     const herbLabel = createTextSprite(data.id, '#ffffff', false);
-                    herbLabel.position.set(0, 1.5, 0); herbLabel.scale.set(6, 1.5, 1); herbMesh.add(herbLabel); 
+                    herbLabel.position.set(0, 1.8, 0); herbLabel.scale.set(6, 1.5, 1); herbMesh.add(herbLabel); 
 
                     herbsGroup.add(herbMesh); herbMeshes.push(herbMesh);
 
@@ -439,9 +441,13 @@
                         if (marker) {
                             const targetWorldPos = new THREE.Vector3(); marker.getWorldPosition(targetWorldPos);
                             const pts = [new THREE.Vector3(x, y, z), targetWorldPos];
-                            const lineMat = new THREE.LineBasicMaterial({ color: data.color, transparent: true, opacity: 0.08 });
+                            const lineMat = new THREE.LineBasicMaterial({ color: data.color, transparent: true, opacity: 0.4 });
                             const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
                             line.userData = { type: 'link', source: data.id, target: targetOrg };
+                            
+                            // TỐI ƯU 3: Ẩn tàng hình toàn bộ đường nối (Lines) khi mới tải xong
+                            line.visible = false; 
+
                             herbsGroup.add(line); linkMeshes.push(line);
                         }
                     });
@@ -449,7 +455,6 @@
 
                 currentIndex += chunkSize;
                 
-                // Cập nhật thanh Loading Bar (Từ 60% đến 100%)
                 const renderProgress = Math.min(100, Math.floor((currentIndex / validHerbs.length) * 100));
                 document.getElementById('render-percent').innerText = `${renderProgress}%`;
                 
@@ -458,17 +463,15 @@
                 document.getElementById('progress-text').innerText = `Đang bố trí dữ liệu không gian... ${renderProgress}%`;
 
                 if (currentIndex < validHerbs.length) {
-                    requestAnimationFrame(renderChunk); // Gọi Frame tiếp theo
+                    requestAnimationFrame(renderChunk);
                 } else {
-                    // HOÀN THÀNH TOÀN BỘ
                     document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span class="text-green-400">Thành công ✓</span>`;
                     document.getElementById('progress-text').innerText = `Hoàn tất!`;
                     applyFilters();
-                    setTimeout(hideLoader, 800);
+                    setTimeout(hideLoader, 600);
                 }
             }
             
-            // Bắt đầu vòng lặp chunk
             requestAnimationFrame(renderChunk);
         }
 
@@ -496,13 +499,14 @@
         });
 
         // ==========================================
-        // 5. CÁC TÍNH NĂNG UI & SEARCH (Giữ nguyên)
+        // 5. THANH TÌM KIẾM THÔNG MINH
         // ==========================================
         const searchInput = document.getElementById('search-input');
         const searchSuggestions = document.getElementById('search-suggestions');
 
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase().trim();
+            state.searchQuery = query;
             if (query === "") {
                 searchSuggestions.classList.add('hidden');
                 resetFocus(); 
@@ -518,6 +522,7 @@
                     searchSuggestions.classList.remove('hidden');
                 }
             }
+            applyFilters();
         });
 
         window.selectSearchItem = function(herbName) {
@@ -529,6 +534,9 @@
 
         document.addEventListener('click', (e) => { if (!e.target.closest('#search-container')) searchSuggestions.classList.add('hidden'); });
 
+        // ==========================================
+        // 6. RAYCASTING (CLICK) VÀ FOCUS OBJECT
+        // ==========================================
         const raycaster = new THREE.Raycaster(); raycaster.params.Line.threshold = 1.5;
         const mouse = new THREE.Vector2();
 
@@ -551,23 +559,35 @@
             state.focusedObj = obj; const data = obj.userData;
             const panel = document.getElementById('info-panel'); const content = document.getElementById('info-content');
 
-            herbMeshes.forEach(m => { m.material.opacity = 0.05; m.scale.set(1,1,1); });
-            linkMeshes.forEach(l => { l.material.opacity = 0.02; l.material.color.setHex(0xffffff); });
+            // Ẩn tất cả và ẩn toàn bộ Link
+            herbMeshes.forEach(m => { m.material.transparent = true; m.material.opacity = 0.05; m.scale.set(1,1,1); });
+            linkMeshes.forEach(l => { l.visible = false; });
 
             if (data.id && ORGAN_NAMES.includes(data.id)) {
+                // Focus Tạng Phủ
                 const orgName = data.id; let herbCount = 0;
-                herbMeshes.forEach(m => { if (m.userData.targetNames.includes(orgName) && m.visible) { m.material.opacity = 1; m.scale.set(1.5, 1.5, 1.5); herbCount++; } });
+                herbMeshes.forEach(m => { 
+                    if (m.userData.targetNames.includes(orgName) && m.visible) { 
+                        m.material.transparent = false; m.material.opacity = 1; m.scale.set(1.5, 1.5, 1.5); herbCount++; 
+                    } 
+                });
                 linkMeshes.forEach(l => {
                     if (l.userData.target === orgName) {
-                        l.material.opacity = 0.8; const sourceNode = herbMeshes.find(h => h.userData.id === l.userData.source);
+                        l.visible = true; l.material.opacity = 0.6; 
+                        const sourceNode = herbMeshes.find(h => h.userData.id === l.userData.source);
                         if(sourceNode) l.material.color.setHex(sourceNode.userData.color);
                     }
                 });
 
                 content.innerHTML = `<div class="mb-4"><span class="px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded text-[10px] uppercase font-bold tracking-widest">Tạng Phủ Kinh Lạc</span><h3 class="text-3xl font-bold text-white mt-2">${orgName}</h3></div><div class="bg-white/5 border border-white/10 rounded-xl p-4"><p class="text-sm text-slate-300">Ghi nhận <strong class="text-sky-400">${herbCount}</strong> vị thuốc đang hiển thị có tác động vào ${orgName}.</p></div>`;
             } else if (data.type === 'herb') {
-                obj.material.opacity = 1; obj.scale.set(2.5, 2.5, 2.5);
-                linkMeshes.forEach(l => { if (l.userData.source === data.id) { l.material.opacity = 0.8; l.material.color.setHex(data.color); } });
+                // Focus Vị Thuốc
+                obj.material.transparent = false; obj.material.opacity = 1; obj.scale.set(2.5, 2.5, 2.5);
+                linkMeshes.forEach(l => { 
+                    if (l.userData.source === data.id) { 
+                        l.visible = true; l.material.opacity = 0.6; l.material.color.setHex(data.color); 
+                    } 
+                });
 
                 const relatedPrescriptions = getPrescriptionsForHerb(data.id);
                 let prescriptionsHTML = relatedPrescriptions.length > 0 ? `<div class="mt-6 border-t border-white/10 pt-5"><h4 class="font-semibold text-slate-400 mb-4 text-[11px] uppercase tracking-widest flex items-center gap-2"><svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path></svg>Có trong Bài thuốc (${relatedPrescriptions.length})</h4><div class="space-y-3">${relatedPrescriptions.map(p => `<div class="bg-black/40 p-4 rounded-xl border border-emerald-900/30 hover:border-emerald-500/50 transition"><div class="text-emerald-300 font-bold text-sm mb-2 leading-tight">${p.prescription.name}</div><div class="flex items-center gap-2 text-xs text-slate-400 mb-2"><span class="bg-white/10 px-2 py-0.5 rounded text-white font-medium">Liều: ${p.dosage}</span>${p.note ? `<span class="italic">(${p.note})</span>` : ''}</div><div class="text-xs text-slate-300 leading-relaxed bg-white/5 p-2 rounded-lg border border-white/5">${p.prescription.uses}</div></div>`).join('')}</div></div>` : `<div class="mt-6 border-t border-white/10 pt-5"><h4 class="font-semibold text-slate-500 mb-2 text-[11px] uppercase tracking-widest">Ứng dụng trong Bài thuốc</h4><p class="text-xs text-slate-500 italic bg-white/5 p-3 rounded-lg border border-white/5">Chưa có thông tin bài thuốc chứa vị này trong CSDL.</p></div>`;
@@ -593,20 +613,25 @@
             });
         }
 
+        // ==========================================
+        // 7. LỌC DỮ LIỆU & TỐI ƯU CULLING
+        // ==========================================
         function applyFilters() {
             if (state.focusedObj) { state.focusedObj = null; document.getElementById('info-panel').classList.add('translate-x-[120%]'); }
             let vHerbs = 0; let vLinks = 0;
+            const isAnyFilterActive = state.activeTinh.length > 0 || state.activeKinh.length > 0 || state.searchQuery !== "";
 
             herbMeshes.forEach(mesh => {
                 const data = mesh.userData;
                 let matchTinh = state.activeTinh.length === 0 || state.activeTinh.includes(data.group);
                 let matchKinh = state.activeKinh.length === 0 || data.targetNames.some(t => state.activeKinh.includes(t));
                 mesh.visible = matchTinh && matchKinh;
+                
                 if(mesh.visible) {
                     vHerbs++;
-                    const isActiveFiltered = state.activeTinh.length > 0 || state.activeKinh.length > 0;
-                    mesh.material.opacity = isActiveFiltered ? 1 : 0.8;
-                    mesh.scale.set(isActiveFiltered ? 1.5 : 1, isActiveFiltered ? 1.5 : 1, isActiveFiltered ? 1.5 : 1);
+                    mesh.material.transparent = isAnyFilterActive;
+                    mesh.material.opacity = isAnyFilterActive ? 0.9 : 1;
+                    mesh.scale.set(isAnyFilterActive ? 1.5 : 1, isAnyFilterActive ? 1.5 : 1, isAnyFilterActive ? 1.5 : 1);
                 }
             });
 
@@ -614,10 +639,13 @@
                 const hMesh = herbMeshes.find(m => m.userData.id === line.userData.source);
                 let isHerbVisible = hMesh ? hMesh.visible : false;
                 let matchKinh = state.activeKinh.length === 0 || state.activeKinh.includes(line.userData.target);
-                line.visible = isHerbVisible && matchKinh;
+                
+                // TỐI ƯU: Chỉ hiện dây nối nếu đang tương tác tìm kiếm/lọc
+                line.visible = isHerbVisible && matchKinh && (state.activeKinh.length > 0 || state.searchQuery !== "");
+                
                 if(line.visible) {
                     vLinks++;
-                    line.material.opacity = (state.activeKinh.length > 0) ? 0.6 : 0.03;
+                    line.material.opacity = 0.5;
                     if(hMesh) line.material.color.setHex(hMesh.userData.color); 
                 }
             });
