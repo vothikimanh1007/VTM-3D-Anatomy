@@ -73,14 +73,15 @@
         </div>
 
         <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
-            <p class="text-red-400 text-xs text-center">Tải tự động thất bại (Do CORS hoặc File lớn). Vui lòng nạp thủ công:</p>
-            <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600">
-                <span>Tải Model (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
+            <p class="text-red-400 text-xs text-center font-bold">⚠️ Tải tự động thất bại (Bị chặn CORS hoặc lỗi File).</p>
+            <p class="text-slate-400 text-xs text-center mb-2">Vui lòng nạp các file dữ liệu theo cách thủ công bên dưới:</p>
+            <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600 transition">
+                <span>Tải Cơ thể 3D (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
             </label>
-            <label class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-blue-500/50">
+            <label class="bg-blue-600/20 hover:bg-blue-600/40 text-blue-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-blue-500/50 transition">
                 <span>Tải ViThuoc_final.csv</span> <input type="file" id="fallback-csv" accept=".csv" class="hidden">
             </label>
-            <button onclick="hideLoader()" class="bg-white/10 hover:bg-white/20 text-white text-sm py-2 rounded-lg">Bỏ qua & Xem giả lập</button>
+            <button onclick="hideLoader()" class="bg-white/10 hover:bg-white/20 text-white text-sm py-2 rounded-lg transition mt-2">Bỏ qua & Vào hệ thống</button>
         </div>
     </div>
 
@@ -191,8 +192,13 @@
         let FORMULAS_DB = [];
 
         function getPrescriptionsForHerb(herbName) {
+            if(!herbName) return [];
             const hNameLower = herbName.toLowerCase();
-            const matchedFormulas = FORMULAS_DB.filter(f => hNameLower.includes(f.herbName.toLowerCase()) || f.herbName.toLowerCase().includes(hNameLower));
+            const matchedFormulas = FORMULAS_DB.filter(f => {
+                if(!f.herbName) return false;
+                const fName = f.herbName.toLowerCase();
+                return hNameLower.includes(fName) || fName.includes(hNameLower);
+            });
             const results = []; const seenIds = new Set();
             
             matchedFormulas.forEach(f => {
@@ -271,7 +277,7 @@
             const marker = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.8 }));
             marker.position.copy(pos); marker.userData = { id: org, type: 'organ' }; 
             
-            const sprite = createTextSprite(org, '#38bdf8', true); // isOrgan = true
+            const sprite = createTextSprite(org, '#38bdf8', true);
             sprite.scale.set(8, 2, 1); sprite.position.set(0, 2, 0); marker.add(sprite); 
             organSystemGroup.add(marker);
         });
@@ -308,12 +314,11 @@
         }
 
         // ==========================================
-        // 4. LUỒNG TẢI DỮ LIỆU ĐA TIẾN TRÌNH & CHUNKING (TỐI ƯU CHỐNG ĐƠ TRÌNH DUYỆT)
+        // 4. LUỒNG TẢI DỮ LIỆU CHỐNG BOM (BOM-PROOF) & CỤC BỘ
         // ==========================================
         const herbsGroup = new THREE.Group();
         scene.add(herbsGroup);
 
-        // Khởi chạy khi load trang
         window.onload = function() {
             document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400 animate-pulse">Đang tải...</span>`;
             
@@ -333,7 +338,7 @@
                     }
                 },
                 (err) => { 
-                    console.warn("Không tìm thấy human_body.glb. Bắt đầu dùng giả lập."); 
+                    console.warn("Không tìm thấy human_body.glb."); 
                     createDummyBody(); 
                     document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D</span> <span class="text-slate-400">Dùng giả lập</span>`;
                     document.getElementById('progress-fill').style.width = '40%';
@@ -353,7 +358,7 @@
                     fetch('./CongThuc_Cleaned.csv')
                 ]);
 
-                if (!viThuocRes.ok) throw new Error("Missing ViThuoc");
+                if (!viThuocRes.ok) throw new Error("Fetch failed");
 
                 const [viThuocText, baiThuocText, congThucText] = await Promise.all([
                     viThuocRes.text(), baiThuocRes.text(), congThucRes.text()
@@ -361,32 +366,54 @@
 
                 document.getElementById('progress-fill').style.width = '60%';
 
+                // Parse Bài Thuốc (Chống BOM lỗi font cột)
                 const rawBaiThuoc = d3.csvParse(baiThuocText);
-                PRESCRIPTIONS_DB = rawBaiThuoc.map(row => ({
-                    id: parseInt(row.ID_BaiThuoc), name: row.TenBaiThuoc, uses: row.ChuTri, origin: row.NguonGoc
-                }));
+                PRESCRIPTIONS_DB = rawBaiThuoc.map(row => {
+                    const keys = Object.keys(row);
+                    const idK = keys.find(k => k.includes('ID_BaiThuoc'));
+                    const nameK = keys.find(k => k.includes('TenBaiThuoc'));
+                    const usesK = keys.find(k => k.includes('ChuTri') || k.includes('CongDung'));
+                    const originK = keys.find(k => k.includes('NguonGoc'));
+                    return {
+                        id: idK ? parseInt(row[idK]) : 0, 
+                        name: nameK ? row[nameK] : "Chưa rõ", 
+                        uses: usesK ? row[usesK] : "", 
+                        origin: originK ? row[originK] : ""
+                    };
+                });
 
+                // Parse Công thức
                 const rawCongThuc = d3.csvParse(congThucText);
-                FORMULAS_DB = rawCongThuc.map(row => ({
-                    baiId: parseInt(row.ID_BaiThuoc), herbName: row.TenViThuoc, dosage: row.LieuLuong, note: row.Ghi_chu_che_bien
-                }));
+                FORMULAS_DB = rawCongThuc.map(row => {
+                    const keys = Object.keys(row);
+                    const baiIdK = keys.find(k => k.includes('ID_BaiThuoc'));
+                    const herbK = keys.find(k => k.includes('TenViThuoc') || k.includes('ViThuoc'));
+                    const dosageK = keys.find(k => k.includes('LieuLuong'));
+                    const noteK = keys.find(k => k.includes('Ghi_chu'));
+                    return {
+                        baiId: baiIdK ? parseInt(row[baiIdK]) : 0, 
+                        herbName: herbK ? row[herbK] : "", 
+                        dosage: dosageK ? row[dosageK] : "", 
+                        note: noteK ? row[noteK] : ""
+                    };
+                });
                 document.getElementById('stat-prescriptions').innerText = PRESCRIPTIONS_DB.length;
 
                 const rawViThuoc = d3.csvParse(viThuocText);
                 document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-green-400">Thành công ✓</span>`;
                 
-                // Gọi hàm dựng hình bất đồng bộ (Chunking) để không treo máy
                 processCSVChunked(rawViThuoc);
 
             } catch (error) {
-                document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-red-400">Lỗi CORS / Thiếu File</span>`;
+                // FALLBACK KHI CHẠY LOCAL FILE:/// BỊ CHẶN CORS HOẶC KHÔNG TÌM THẤY TRÊN GITHUB
+                document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-red-400">Bị chặn / Lỗi File</span>`;
                 document.getElementById('manual-fallback').classList.remove('hidden');
-                document.getElementById('progress-text').innerText = `Tải tự động bị từ chối!`;
+                document.getElementById('progress-text').innerText = `Vui lòng sử dụng tính năng tải thủ công.`;
             }
         }
 
         // ==========================================
-        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING) & TỐI ƯU VRAM
+        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING) & BOM PROOF
         // ==========================================
         function processCSVChunked(rawData) {
             document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span id="render-percent" class="text-yellow-400 animate-pulse">0%</span>`;
@@ -394,27 +421,40 @@
             herbsGroup.clear(); herbMeshes = []; linkMeshes = []; 
             let mapDedup = new Map();
 
+            // Lọc dữ liệu chống rác Excel BOM (BOM-PROOF)
             rawData.forEach(row => {
-                let ten = row['TenVietNam'] ? row['TenVietNam'].trim() : "";
+                const keys = Object.keys(row);
+                const tenKey = keys.find(k => k.toLowerCase().includes('tenvietnam') || k.toLowerCase().includes('tên'));
+                const tinhViKey = keys.find(k => k.toLowerCase().includes('tinhvi') || k.toLowerCase().includes('tính vị'));
+                const quyKinhKey = keys.find(k => k.toLowerCase().includes('quykinh') || k.toLowerCase().includes('quy kinh'));
+                const usesKey = keys.find(k => k.toLowerCase().includes('congdung') || k.toLowerCase().includes('chutri'));
+
+                let ten = tenKey && row[tenKey] ? row[tenKey].trim() : "";
                 if(!ten || mapDedup.has(ten)) return;
                 
-                let quyKinhRaw = row['QuyKinh'] ? row['QuyKinh'].toLowerCase() : "";
+                let quyKinhRaw = quyKinhKey && row[quyKinhKey] ? row[quyKinhKey].toLowerCase() : "";
                 let targetNames = [];
                 ORGAN_NAMES.forEach(org => { if(quyKinhRaw.includes(org.toLowerCase())) targetNames.push(org); });
 
-                let tinhVi = row['TinhVi'] || ""; let group = "binh"; let color = 0x22c55e;
+                let tinhVi = tinhViKey && row[tinhViKey] ? row[tinhViKey] : "Không rõ"; 
+                let group = "binh"; let color = 0x22c55e;
                 if(tinhVi.toLowerCase().includes("hàn") || tinhVi.toLowerCase().includes("lương")) { group = "han"; color = 0x3b82f6; }
                 else if(tinhVi.toLowerCase().includes("nhiệt") || tinhVi.toLowerCase().includes("ôn")) { group = "nhiet"; color = 0xef4444; }
 
-                mapDedup.set(ten, { id: ten, tinhVi: tinhVi, color: color, group: group, targetNames: targetNames, uses: row['CongDung'] || "" });
+                mapDedup.set(ten, { id: ten, tinhVi: tinhVi, color: color, group: group, targetNames: targetNames, uses: usesKey && row[usesKey] ? row[usesKey] : "" });
             });
 
             const validHerbs = Array.from(mapDedup.values());
             
+            // Xử lý báo lỗi nếu file CSV hoàn toàn không có dữ liệu
+            if(validHerbs.length === 0) {
+                alert("Hệ thống không tìm thấy vị thuốc nào! Vui lòng kiểm tra lại file CSV của bạn xem có cột 'TenVietNam' không.");
+                hideLoader();
+                return;
+            }
+            
             let currentIndex = 0;
-            const chunkSize = 20; // Giảm chunk size xuống 20 để UI tuyệt đối không bị giật
-
-            // TỐI ƯU 1: GỘP HÌNH HỌC (Geometry Pooling) để tiết kiệm RAM
+            const chunkSize = 20; 
             const sharedHerbGeo = new THREE.SphereGeometry(1.0, 12, 12);
 
             function renderChunk() {
@@ -425,7 +465,6 @@
                     const radius = 70 + Math.random() * 60; const theta = i * 137.5 * (Math.PI/180); const y = -50 + Math.random() * 100;
                     const x = radius * Math.cos(theta); const z = radius * Math.sin(theta);
 
-                    // TỐI ƯU 2: Bỏ transparent mặc định, giúp GPU không phải Render Sort
                     const herbMat = new THREE.MeshStandardMaterial({ color: data.color, emissive: data.color, emissiveIntensity: 0.8 });
                     const herbMesh = new THREE.Mesh(sharedHerbGeo, herbMat);
                     herbMesh.position.set(x, y, z);
@@ -445,9 +484,7 @@
                             const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
                             line.userData = { type: 'link', source: data.id, target: targetOrg };
                             
-                            // TỐI ƯU 3: Ẩn tàng hình toàn bộ đường nối (Lines) khi mới tải xong
                             line.visible = false; 
-
                             herbsGroup.add(line); linkMeshes.push(line);
                         }
                     });
@@ -494,7 +531,14 @@
         document.getElementById('fallback-csv').addEventListener('change', (e) => {
             const file = e.target.files[0]; if(!file) return;
             const reader = new FileReader();
-            reader.onload = (evt) => { processCSVChunked(d3.csvParse(evt.target.result)); };
+            reader.onload = (evt) => { 
+                try {
+                    processCSVChunked(d3.csvParse(evt.target.result)); 
+                    hideLoader();
+                } catch(e) {
+                    alert("Có lỗi trong lúc xử lý file CSV. Xin vui lòng kiểm tra lại cấu trúc file.");
+                }
+            };
             reader.readAsText(file);
         });
 
@@ -614,10 +658,15 @@
         }
 
         // ==========================================
-        // 7. LỌC DỮ LIỆU & TỐI ƯU CULLING
+        // 7. LỌC DỮ LIỆU TỐI ƯU HÓA O(1) CHO HIỆU NĂNG CAO
         // ==========================================
         function applyFilters() {
             if (state.focusedObj) { state.focusedObj = null; document.getElementById('info-panel').classList.add('translate-x-[120%]'); }
+            
+            // MAP để tra cứu nhanh lưới Vị thuốc (Chống lag khi có hàng ngàn link)
+            const herbMeshMap = new Map();
+            herbMeshes.forEach(mesh => herbMeshMap.set(mesh.userData.id, mesh));
+
             let vHerbs = 0; let vLinks = 0;
             const isAnyFilterActive = state.activeTinh.length > 0 || state.activeKinh.length > 0 || state.searchQuery !== "";
 
@@ -636,11 +685,10 @@
             });
 
             linkMeshes.forEach(line => {
-                const hMesh = herbMeshes.find(m => m.userData.id === line.userData.source);
+                const hMesh = herbMeshMap.get(line.userData.source);
                 let isHerbVisible = hMesh ? hMesh.visible : false;
                 let matchKinh = state.activeKinh.length === 0 || state.activeKinh.includes(line.userData.target);
                 
-                // TỐI ƯU: Chỉ hiện dây nối nếu đang tương tác tìm kiếm/lọc
                 line.visible = isHerbVisible && matchKinh && (state.activeKinh.length > 0 || state.searchQuery !== "");
                 
                 if(line.visible) {
