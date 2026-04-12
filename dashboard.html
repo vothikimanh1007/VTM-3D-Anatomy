@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YHCT 2D Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        #viz-container {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            cursor: grab; overflow: hidden;
+        }
+        #viz-container:active { cursor: grabbing; }
+        
+        /* Chỉnh style cho Đồ thị vòng tròn */
+        .node-herb circle { stroke: #1e293b; stroke-width: 1px; transition: all 0.3s ease; }
+        .node-herb:hover circle { stroke: #fbbf24; stroke-width: 3px; filter: drop-shadow(0 0 10px rgba(251, 191, 36, 1)); }
+        
+        .node-organ circle { filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4)); stroke: #4c1d95; stroke-width: 2px; transition: all 0.3s ease; }
+        .node-organ:hover circle { filter: drop-shadow(0 0 25px rgba(168, 85, 247, 1)); stroke: #fff; stroke-width: 3px; }
+        
+        .link { fill: none; stroke: rgba(148, 163, 184, 0.15); stroke-width: 1px; transition: stroke 0.3s, stroke-width 0.3s; }
+        .link.active { stroke: #fbbf24; stroke-width: 2px; stroke-dasharray: 6 4; animation: flow 2s linear infinite; stroke-opacity: 0.9; }
+        
+        @keyframes flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+
+        .dimmed { opacity: 0.05 !important; transition: opacity 0.4s; pointer-events: none; }
+        .highlighted { opacity: 1 !important; transition: opacity 0.4s; z-index: 10; }
+
+        .tooltip {
+            position: absolute; background: rgba(15, 23, 42, 0.95); color: #f1f5f9;
+            padding: 12px 16px; border-radius: 8px; border: 1px solid #334155;
+            pointer-events: none; opacity: 0; z-index: 50; backdrop-filter: blur(8px);
+            font-size: 0.875rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Màn hình chờ Auto-Load */
+        #init-loader {
+            position: fixed; inset: 0; background: rgba(9, 9, 11, 0.98); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.5s; backdrop-filter: blur(10px);
+        }
+        
+        .pill-checkbox input:checked + div { background-color: var(--active-bg); border-color: var(--active-border); color: white; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden flex flex-col text-slate-800">
+
+    <!-- MÀN HÌNH CHỜ AUTO-LOAD -->
+    <div id="init-loader">
+        <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-sky-400 tracking-tight mb-2 animate-pulse">2D Radial Dashboard</h1>
+        <p class="text-slate-400 text-sm mb-6">Đang tự động đồng bộ dữ liệu từ máy chủ...</p>
+        
+        <div class="text-xs text-slate-500 bg-white/5 p-4 rounded-xl border border-white/5 w-80">
+            <div class="flex justify-between mb-2" id="status-db"><span>CSDL Bài Thuốc</span> <span class="text-green-400">Đã nhúng ✓</span></div>
+            <div class="flex justify-between mb-2" id="status-csv"><span>Dữ liệu ViThuoc.csv</span> <span class="text-yellow-400 animate-pulse">Đang tải...</span></div>
+            <div class="flex justify-between" id="status-render"><span>Dựng hình Đồ thị</span> <span class="text-yellow-400">Đợi...</span></div>
+        </div>
+
+        <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
+            <p class="text-red-400 text-xs text-center font-bold">⚠️ Tải tự động thất bại (Bị chặn CORS hoặc lỗi File).</p>
+            <p class="text-slate-400 text-xs text-center mb-2">Vui lòng tải file ViThuoc thủ công:</p>
+            <label class="bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-200 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-emerald-500/50 transition">
+                <span>Tải ViThuoc_final.csv</span> <input type="file" id="fallback-csv" accept=".csv" class="hidden">
+            </label>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center shadow-sm z-10 shrink-0">
+        <div class="flex items-center gap-4">
+            <a href="index.html" class="flex items-center justify-center p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition" title="Trở về Không gian 3D">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </a>
+            <div class="w-px h-6 bg-gray-300"></div>
+            <div class="bg-emerald-600 text-white p-2 rounded-lg shadow-inner">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 leading-tight">Radial TCM Dashboard <span class="bg-emerald-100 text-emerald-700 text-[10px] uppercase px-2 py-0.5 rounded ml-2 font-bold tracking-wider border border-emerald-200">2D Analytics</span></h1>
+                <p class="text-xs text-gray-500 mt-0.5">Hiển thị: <span id="node-count" class="font-bold text-emerald-600">0</span> / Tổng: <span id="total-count">0</span> Vị thuốc</p>
+            </div>
+        </div>
+        <div class="flex gap-4">
+            <button id="reset-btn" class="px-4 py-2 bg-white hover:bg-gray-50 text-slate-700 rounded-lg text-sm font-medium transition border border-slate-300 shadow-sm flex items-center gap-2">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Khôi phục Toàn cảnh
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Search & Filters -->
+        <aside class="w-[320px] bg-white border-r border-gray-200 flex flex-col shrink-0 z-10 shadow-lg">
+            <div class="p-5 border-b border-gray-100 bg-gray-50/50">
+                <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider">Tra cứu Vị thuốc</h3>
+                <div class="relative" id="search-container">
+                    <input type="text" id="search-input" autocomplete="off" placeholder="VD: Bồ công anh..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-sm">
+                    <svg class="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <ul id="search-suggestions" class="absolute z-50 w-full bg-white border border-gray-200 rounded-lg mt-1 max-h-56 overflow-y-auto hidden shadow-xl text-sm"></ul>
+                </div>
+            </div>
+
+            <div class="p-5 flex-1 overflow-y-auto">
+                <div class="mb-8">
+                    <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider flex justify-between items-center">
+                        Lọc theo Tính Vị
+                        <span class="text-[10px] font-medium bg-gray-200 text-gray-600 px-2 py-1 rounded cursor-pointer hover:bg-gray-300 transition" id="clear-tinh">XÓA LỌC</span>
+                    </h3>
+                    <div class="space-y-1">
+                        <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-blue-50 cursor-pointer border border-transparent hover:border-blue-100 transition group pill-checkbox" style="--active-bg: #eff6ff; --active-border: #bfdbfe;">
+                            <input type="checkbox" class="filter-tinh hidden" value="han">
+                            <div class="flex items-center gap-3 w-full p-1 rounded transition-colors">
+                                <span class="w-3 h-3 rounded-full bg-blue-500 block shadow-sm"></span>
+                                <span class="text-sm font-medium text-gray-700 flex-1">Tính Hàn / Lương</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 cursor-pointer border border-transparent hover:border-red-100 transition group pill-checkbox" style="--active-bg: #fef2f2; --active-border: #fecaca;">
+                            <input type="checkbox" class="filter-tinh hidden" value="nhiet">
+                            <div class="flex items-center gap-3 w-full p-1 rounded transition-colors">
+                                <span class="w-3 h-3 rounded-full bg-red-500 block shadow-sm"></span>
+                                <span class="text-sm font-medium text-gray-700 flex-1">Tính Ôn / Nhiệt</span>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-green-50 cursor-pointer border border-transparent hover:border-green-100 transition group pill-checkbox" style="--active-bg: #f0fdf4; --active-border: #bbf7d0;">
+                            <input type="checkbox" class="filter-tinh hidden" value="binh">
+                            <div class="flex items-center gap-3 w-full p-1 rounded transition-colors">
+                                <span class="w-3 h-3 rounded-full bg-green-500 block shadow-sm"></span>
+                                <span class="text-sm font-medium text-gray-700 flex-1">Tính Bình</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="font-bold text-gray-700 mb-3 text-xs uppercase tracking-wider">Lọc theo Kinh Lạc (Tạng Phủ)</h3>
+                    <div class="flex flex-wrap gap-2" id="kinh-filters"></div>
+                </div>
+            </div>
+            
+            <div class="p-4 bg-emerald-50 border-t border-emerald-100">
+                <p class="text-[11px] text-emerald-800 leading-relaxed font-medium">💡 Đồ thị Hướng tâm sắp xếp Tạng Phủ ở lõi trung tâm. Các Vị thuốc xoay quanh quỹ đạo ngoài.</p>
+            </div>
+        </aside>
+
+        <!-- Center: Topology Visualizer -->
+        <main class="flex-1 relative">
+            <div id="viz-container"></div>
+            <div id="tooltip" class="tooltip"></div>
+            
+            <!-- Zoom controls -->
+            <div class="absolute bottom-6 right-6 flex flex-col gap-2 bg-slate-800/90 p-2 rounded-xl backdrop-blur border border-slate-600 shadow-2xl">
+                <button id="zoom-in" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
+                <div class="w-full h-px bg-slate-600"></div>
+                <button id="zoom-out" class="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button>
+            </div>
+        </main>
+
+        <!-- Right Panel: Data Details -->
+        <aside class="w-[420px] bg-white border-l border-gray-200 shadow-2xl shrink-0 flex flex-col z-10">
+            <div class="p-5 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+                <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                </div>
+                <h2 class="font-bold text-gray-800 text-lg">Hồ sơ Chi tiết</h2>
+            </div>
+            <div id="info-panel" class="p-6 flex-1 overflow-y-auto">
+                <div class="flex flex-col items-center justify-center h-full text-center text-gray-400">
+                    <svg class="w-16 h-16 mb-4 stroke-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    <p class="text-base font-semibold text-gray-600">Trạng thái Tổng quan</p>
+                    <p class="text-sm mt-2">Chọn một Vị thuốc hoặc Tạng phủ từ không gian đồ thị bên trái để trích xuất dữ liệu.</p>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // ==========================================
+        // 0. CƠ SỞ DỮ LIỆU BÀI THUỐC TÍCH HỢP SẴN
+        // ==========================================
+        const RAW_BAI_THUOC_CSV = `ID_BaiThuoc,TenBaiThuoc,ChuTri,NguonGoc
+101,Cao ích mẫu (Công thức của QDDP Nghệ An),"Điều kinh, bổ huyết.","Sách ""Những cây thuốc và vị thuốc Việt Nam"""
+102,Cao hương ngải (FUNUX/CYPERIN),"Chữa kinh nguyệt không đều, đau bụng kinh, khó sinh nở, khí hư bạch đới.",Đơn của Đỗ Tất Lợi.
+103,"Thuốc an thai (Ngải cứu, Tía tô)","Chữa đang có thai bị đau bụng, chảy máu.","Sách ""Những cây thuốc và vị thuốc Việt Nam"""
+104,Thuốc chữa vàng da (Bệnh viện Lạng Sơn),"Chữa bệnh vàng da và niêm mạc, nước tiểu có sắc tố mật.",Kinh nghiệm Bệnh viện Lạng Sơn.
+105,"Đơn thuốc chữa viêm sưng tai giữa, tắc tia sữa","Chữa bệnh viêm sưng tai giữa, sưng tắc tia sữa.",Kinh nghiệm dùng cây diếp cá.
+106,Tiểu bán hạ gia phục linh thang,Chữa phụ nữ có thai bị nôn mửa .,Trương Trọng Cảnh.
+107,"Đơn thuốc chữa hen suyễn, nôn","Chữa hen suyễn, nặng mặt, nằm không được, muốn nôn oẹ, bụng dưới nôn nao.",Kinh nghiệm nhân dân.
+108,Đơn thuốc điều kinh (Vỏ rễ bông),"Điều kinh, thông kinh.",Kinh nghiệm nhân dân.
+115,Thược dược cam thảo thang,"Chữa chân và đầu gối đau nhức không co duỗi được, đau bụng.",Trương Trọng Cảnh.
+116,Quế chi gia linh truật,"Chữa đầu nhức, mắt hoa.",Trương Trọng Cảnh.
+118,Đơn thuốc chữa băng huyết bạch đới (Xích thược),"Chữa băng huyết, bạch đới.",Kinh nghiệm nhân dân.
+119,Duyên hồ sách thang,"Chữa đau bụng, đau khi hành kinh.",Hòa hán ứng dụng phương (Nhật Bản).
+121,Đơn thuốc chữa đau dạ dày (BCA VN),Chữa đau dạ dày.,Kinh nghiệm nhân dân.
+123,Ngân kiều tán,"Chữa mụn nhọt, sốt, cảm.",Kinh nghiệm cổ phương.`;
+
+        const RAW_CONG_THUC_CSV = `ID_BaiThuoc,ID_ViThuoc,TenViThuoc,LieuLuong,Ghi_chu_che_bien
+101,1.0,Ích mẫu,70%,
+101,473.0,Xuyên khung,2%,
+101,17.0,Đương quy,10%,
+101,23.0,Bạch thược,3%,
+101,2.0,Hương phụ,5%,tứ chế
+102,2.0,Hương phụ,1g,
+102,3.0,Ngải cứu,1g,
+102,1.0,Ích mẫu,1g,
+103,,Lá ngải cứu,16g,khô
+103,469.0,Tía tô,16g,
+105,5.0,Cây diếp cá,20g,khô
+106,9.0,Bán hạ,8g,
+106,153.0,Phục linh,6g,
+115,23.0,Bạch thược,12g,
+115,606.0,Cam thảo,4g,
+116,,Quế chi,6g,
+116,23.0,Bạch thược,6g,
+116,630.0,Đại táo,6g,
+116,265.0,Sinh khương,6g,
+116,153.0,Phục linh,6g,
+116,280.0,Bạch truật,6g,
+116,606.0,Cam thảo,4g,
+118,24.0,Xích thược,(bằng nhau),Tán nhỏ
+118,2.0,Hương phụ,(bằng nhau),Tán nhỏ
+119,28.0,Duyên hồ sách,4.0g,
+119,17.0,Đương quy,3.0g`;
+
+        let PRESCRIPTIONS_DB = [];
+        let FORMULAS_DB = [];
+
+        try {
+            const rawBaiThuoc = d3.csvParse(RAW_BAI_THUOC_CSV.trim());
+            PRESCRIPTIONS_DB = rawBaiThuoc.map(row => {
+                const keys = Object.keys(row);
+                const idK = keys.find(k => k && k.includes('ID_BaiThuoc'));
+                const nameK = keys.find(k => k && k.includes('TenBaiThuoc'));
+                const usesK = keys.find(k => k && (k.includes('ChuTri') || k.includes('CongDung')));
+                const originK = keys.find(k => k && k.includes('NguonGoc'));
+                return {
+                    id: idK ? parseInt(row[idK]) : 0, 
+                    name: nameK ? row[nameK] : "Chưa rõ", 
+                    uses: usesK ? row[usesK] : "", 
+                    origin: originK ? row[originK] : ""
+                };
+            }).filter(p => p.id);
+
+            const rawCongThuc = d3.csvParse(RAW_CONG_THUC_CSV.trim());
+            FORMULAS_DB = rawCongThuc.map(row => {
+                const keys = Object.keys(row);
+                const baiIdK = keys.find(k => k && k.includes('ID_BaiThuoc'));
+                const herbK = keys.find(k => k && (k.includes('TenViThuoc') || k.includes('ViThuoc')));
+                const dosageK = keys.find(k => k && k.includes('LieuLuong'));
+                const noteK = keys.find(k => k && k.includes('Ghi_chu'));
+                return {
+                    baiId: baiIdK ? parseInt(row[baiIdK]) : 0, 
+                    herbName: herbK ? row[herbK] : "", 
+                    dosage: dosageK ? row[dosageK] : "", 
+                    note: noteK ? row[noteK] : ""
+                };
+            }).filter(f => f.baiId);
+        } catch(e) { console.error("Lỗi parse DB cứng:", e); }
+
+        function getPrescriptionsForHerb(herbName) {
+            if(!herbName) return [];
+            const hNameLower = herbName.toLowerCase();
+            const matchedFormulas = FORMULAS_DB.filter(f => {
+                if(!f.herbName) return false;
+                return hNameLower.includes(f.herbName.toLowerCase()) || f.herbName.toLowerCase().includes(hNameLower);
+            });
+            const results = []; const seenIds = new Set();
+            matchedFormulas.forEach(f => {
+                if (!seenIds.has(f.baiId)) {
+                    seenIds.add(f.baiId);
+                    const baiThuoc = PRESCRIPTIONS_DB.find(b => b.id === f.baiId);
+                    if (baiThuoc) results.push({ prescription: baiThuoc, dosage: f.dosage, note: f.note });
+                }
+            });
+            return results;
+        }
+
+        // --- 1. CONFIGURATION & CONSTANTS ---
+        const STANDARD_ORGANS = [
+            "Tâm", "Phế", "Can", "Tỳ", "Thận", "Tâm Bào",
+            "Đởm", "Vị", "Đại Tràng", "Tiểu Tràng", "Bàng Quang", "Tam Tiêu"
+        ];
+
+        let allOrgans = STANDARD_ORGANS.map(id => ({
+            id: id, label: id, type: 'organ', desc: `Kinh lạc chủ quản: ${id}`
+        }));
+
+        let allHerbs = [];
+        let allLinks = [];
+        
+        let state = { searchQuery: "", activeTinh: [], activeKinh: [], focusNodeId: null };
+
+        // --- 2. AUTO-LOAD DỮ LIỆU TỪ GITHUB ---
+        window.onload = async function() {
+            try {
+                const viThuocRes = await fetch('./ViThuoc_final.csv').catch(() => null);
+                if (!viThuocRes || !viThuocRes.ok) throw new Error("Missing ViThuoc");
+                const viThuocText = await viThuocRes.text();
+                
+                document.getElementById('status-csv').innerHTML = `<span>Dữ liệu ViThuoc.csv</span> <span class="text-green-400">Thành công ✓</span>`;
+                
+                const rawData = d3.csvParse(viThuocText);
+                processRawCSV(rawData);
+
+            } catch (error) {
+                document.getElementById('status-csv').innerHTML = `<span>Dữ liệu ViThuoc.csv</span> <span class="text-red-400">Bị chặn/Lỗi</span>`;
+                document.getElementById('manual-fallback').classList.remove('hidden');
+            }
+        };
+
+        // Fallback upload thủ công
+        document.getElementById('fallback-csv').addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try { processRawCSV(d3.csvParse(event.target.result)); } 
+                catch (error) { alert("Lỗi định dạng file!"); }
+            };
+            reader.readAsText(file);
+        });
+
+        function processRawCSV(rawData) {
+            document.getElementById('status-render').innerHTML = `<span>Dựng hình Đồ thị</span> <span class="text-yellow-400">Đang chạy...</span>`;
+            
+            let processedHerbsMap = new Map();
+            let processedLinks = [];
+
+            rawData.forEach(row => {
+                const keys = Object.keys(row);
+                const tenKey = keys.find(k => k && (k.toLowerCase().includes('tenvietnam') || k.toLowerCase().includes('tên')));
+                const tinhViKey = keys.find(k => k && (k.toLowerCase().includes('tinhvi') || k.toLowerCase().includes('tính vị')));
+                const quyKinhKey = keys.find(k => k && (k.toLowerCase().includes('quykinh') || k.toLowerCase().includes('quy kinh')));
+                const usesKey = keys.find(k => k && (k.toLowerCase().includes('congdung') || k.toLowerCase().includes('chutri')));
+
+                let ten = tenKey && row[tenKey] ? row[tenKey].trim() : "";
+                if(!ten || processedHerbsMap.has(ten)) return;
+                
+                let tinhViRaw = tinhViKey && row[tinhViKey] ? row[tinhViKey].toLowerCase() : "Không rõ";
+                let quyKinhRaw = quyKinhKey && row[quyKinhKey] ? row[quyKinhKey].toLowerCase() : "";
+                let uses = usesKey && row[usesKey] ? row[usesKey].trim() : "Chưa cập nhật...";
+
+                let group = "binh";
+                if (tinhViRaw.includes("hàn") || tinhViRaw.includes("lương")) group = "han";
+                else if (tinhViRaw.includes("ôn") || tinhViRaw.includes("nhiệt")) group = "nhiet";
+
+                let herbNode = { id: ten, tinhVi: row[tinhViKey] || "Không rõ", uses: uses, group: group, kinh: [], type: 'herb' };
+                
+                let matched = false;
+                STANDARD_ORGANS.forEach(organId => {
+                    if (quyKinhRaw.includes(organId.toLowerCase())) {
+                        herbNode.kinh.push(organId);
+                        processedLinks.push({ source: ten, target: organId });
+                        matched = true;
+                    }
+                });
+
+                if (matched) processedHerbsMap.set(ten, herbNode);
+            });
+
+            if (processedHerbsMap.size === 0) {
+                alert("File không chứa dữ liệu hợp lệ!");
+                return;
+            }
+
+            allHerbs = Array.from(processedHerbsMap.values());
+            allLinks = processedLinks;
+            document.getElementById('total-count').innerText = allHerbs.length;
+
+            const loader = document.getElementById('init-loader');
+            loader.style.opacity = '0';
+            setTimeout(() => { loader.style.display = 'none'; }, 500);
+
+            updateGraph();
+        }
+
+        // --- 3. D3 CANVAS SETUP ---
+        const container = document.getElementById("viz-container");
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+
+        const svg = d3.select("#viz-container").append("svg").attr("width", "100%").attr("height", "100%");
+        const g = svg.append("g");
+        
+        // Khởi tạo Zoom & Pan để view được bao quát toàn bộ Radial
+        const initialTransform = d3.zoomIdentity.translate(width/2, height/2).scale(0.85);
+        const zoom = d3.zoom().scaleExtent([0.1, 4]).on("zoom", e => g.attr("transform", e.transform));
+        svg.call(zoom).call(zoom.transform, initialTransform);
+        
+        d3.select("#zoom-in").on("click", () => svg.transition().call(zoom.scaleBy, 1.3));
+        d3.select("#zoom-out").on("click", () => svg.transition().call(zoom.scaleBy, 0.7));
+
+        const linkGroup = g.append("g").attr("class", "links");
+        const nodeGroup = g.append("g").attr("class", "nodes");
+        
+        // --- RADIAL FORCE SIMULATION ---
+        const simulation = d3.forceSimulation()
+            .force("link", d3.forceLink().id(d => d.id).strength(0.05))
+            .force("r", d3.forceRadial(d => d.type === 'organ' ? 140 : 420).strength(0.8))
+            .force("collide", d3.forceCollide().radius(d => d.type === 'organ' ? 40 : 10).iterations(3))
+            .force("charge", d3.forceManyBody().strength(d => d.type === 'organ' ? -300 : -20));
+
+        // --- 4. CORE UPDATE LOGIC ---
+        function getFilteredData() {
+            let filteredHerbs = allHerbs;
+
+            if (state.searchQuery) {
+                const q = state.searchQuery.toLowerCase();
+                filteredHerbs = filteredHerbs.filter(h => h.id.toLowerCase().includes(q));
+            }
+            if (state.activeTinh.length > 0) {
+                filteredHerbs = filteredHerbs.filter(h => state.activeTinh.includes(h.group));
+            }
+            if (state.activeKinh.length > 0) {
+                filteredHerbs = filteredHerbs.filter(h => h.kinh.some(k => state.activeKinh.includes(k)));
+            }
+
+            const validHerbIds = new Set(filteredHerbs.map(h => h.id));
+            const filteredLinks = allLinks.filter(l => validHerbIds.has(l.source.id || l.source));
+
+            const neededOrgansIds = new Set();
+            filteredLinks.forEach(l => neededOrgansIds.add(l.target.id || l.target));
+            
+            const filteredOrgans = (state.activeKinh.length > 0 || state.searchQuery) 
+                ? allOrgans.filter(o => neededOrgansIds.has(o.id)) : allOrgans;
+
+            document.getElementById('node-count').innerText = filteredHerbs.length;
+
+            return { nodes: [...filteredOrgans, ...filteredHerbs], links: filteredLinks };
+        }
+
+        function updateGraph() {
+            const data = getFilteredData();
+            state.focusNodeId = null; 
+
+            const linkSelection = linkGroup.selectAll("path").data(data.links, d => (d.source.id || d.source) + "-" + (d.target.id || d.target));
+            linkSelection.exit().remove();
+            const linkEnter = linkSelection.enter().append("path").attr("class", "link");
+            const links = linkEnter.merge(linkSelection);
+
+            const nodeSelection = nodeGroup.selectAll("g").data(data.nodes, d => d.id);
+            nodeSelection.exit().remove();
+            
+            const nodeEnter = nodeSelection.enter().append("g")
+                .attr("class", d => d.type === 'organ' ? 'node-organ cursor-pointer' : 'node-herb cursor-pointer')
+                .call(d3.drag()
+                    .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+                    .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+                    .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+                );
+
+            nodeEnter.filter(d => d.type === 'organ').append("circle")
+                .attr("r", 30).attr("fill", "#2e1065");
+            nodeEnter.filter(d => d.type === 'organ').append("text")
+                .attr("dy", 4).attr("text-anchor", "middle").attr("fill", "#e9d5ff").attr("font-size", "14px").attr("font-weight", "bold")
+                .text(d => d.label);
+
+            nodeEnter.filter(d => d.type === 'herb').append("circle")
+                .attr("r", 6).attr("fill", d => d.group === 'han' ? "#3b82f6" : d.group === 'nhiet' ? "#ef4444" : "#22c55e");
+            nodeEnter.filter(d => d.type === 'herb').append("text")
+                .attr("dx", 10).attr("dy", 3).attr("fill", "#94a3b8").attr("font-size", "11px").attr("font-weight", "500")
+                .text(d => d.id);
+
+            const nodes = nodeEnter.merge(nodeSelection);
+
+            setupInteractions(nodes, links);
+
+            simulation.nodes(data.nodes);
+            simulation.force("link").links(data.links);
+            simulation.alpha(1).restart();
+
+            function linkArc(d) {
+                const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
+                const dr = Math.sqrt(dx * dx + dy * dy) * 1.5; 
+                return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+            }
+
+            simulation.on("tick", () => {
+                links.attr("d", linkArc);
+                nodes.attr("transform", d => `translate(${d.x},${d.y})`);
+                
+                nodes.filter(d => d.type === 'herb').select("text")
+                     .attr("transform", d => {
+                         const angle = Math.atan2(d.y, d.x) * 180 / Math.PI;
+                         return angle > 90 || angle < -90 ? `rotate(${angle + 180}) translate(-20, 0)` : `rotate(${angle})`;
+                     })
+                     .attr("text-anchor", d => {
+                         const angle = Math.atan2(d.y, d.x) * 180 / Math.PI;
+                         return angle > 90 || angle < -90 ? "end" : "start";
+                     });
+            });
+            
+            links.classed("active dimmed", false);
+            nodes.classed("highlighted dimmed", false);
+        }
+
+        // --- 5. INTERACTION LOGIC (CÓ TÍCH HỢP BÀI THUỐC) ---
+        function setupInteractions(nodes, links) {
+            const tooltip = d3.select("#tooltip");
+            const infoPanel = d3.select("#info-panel");
+
+            nodes.on("mouseover", function(event, d) {
+                if (state.focusNodeId && state.focusNodeId !== d.id) return;
+                
+                d3.select(this).select("circle").transition().duration(200).attr("r", d.type === 'organ' ? 35 : 12);
+                tooltip.style("opacity", 1)
+                    .html(`<strong>${d.id}</strong><br/><span class="text-slate-400 text-xs">${d.type === 'organ' ? 'Hệ thống Tạng Phủ' : d.tinhVi}</span>`)
+                    .style("left", (event.pageX + 15) + "px").style("top", (event.pageY - 20) + "px");
+
+                if (!state.focusNodeId) {
+                    const connected = new Set([d.id]);
+                    links.classed("active", l => {
+                        const isConn = l.source.id === d.id || l.target.id === d.id;
+                        if(isConn) { connected.add(l.source.id); connected.add(l.target.id); }
+                        return isConn;
+                    }).classed("dimmed", l => !(l.source.id === d.id || l.target.id === d.id));
+                    nodes.classed("dimmed", n => !connected.has(n.id)).classed("highlighted", n => connected.has(n.id));
+                }
+            })
+            .on("mouseout", function(event, d) {
+                d3.select(this).select("circle").transition().duration(200).attr("r", d.type === 'organ' ? 30 : 6);
+                tooltip.style("opacity", 0);
+                if (!state.focusNodeId) {
+                    links.classed("active dimmed", false);
+                    nodes.classed("dimmed highlighted", false);
+                }
+            })
+            .on("click", function(event, d) {
+                state.focusNodeId = d.id;
+                
+                const connected = new Set([d.id]);
+                links.classed("active", l => {
+                    const isConn = l.source.id === d.id || l.target.id === d.id;
+                    if(isConn) { connected.add(l.source.id); connected.add(l.target.id); }
+                    return isConn;
+                }).classed("dimmed", l => !(l.source.id === d.id || l.target.id === d.id));
+                nodes.classed("dimmed", n => !connected.has(n.id)).classed("highlighted", n => connected.has(n.id));
+
+                if(d.type === 'organ') {
+                    const herbs = links.data().filter(l => l.target.id === d.id).map(l => l.source);
+                    let listHTML = herbs.map(h => `<div class="bg-white border border-gray-100 rounded-xl p-3 shadow-sm mb-3 hover:shadow-md transition"><div class="font-bold text-gray-800 flex justify-between items-center">${h.id} <span class="w-2 h-2 rounded-full ${h.group === 'han' ? 'bg-blue-500' : h.group === 'nhiet' ? 'bg-red-500' : 'bg-green-500'}"></span></div><div class="text-xs text-gray-500 mt-1.5 leading-relaxed">${h.uses}</div></div>`).join('');
+                    
+                    infoPanel.html(`
+                        <div class="mb-5 inline-flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold uppercase tracking-wider"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> KINH LẠC</div>
+                        <h3 class="text-3xl font-extrabold text-gray-800 mb-3">${d.label}</h3>
+                        <p class="text-gray-600 mb-6 bg-purple-50/50 p-4 rounded-xl border border-purple-100 text-sm leading-relaxed">${d.desc}</p>
+                        
+                        <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2 border-l-4 border-purple-500 pl-3">Vị thuốc tác động <span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">${herbs.length}</span></h4>
+                        <div class="h-[400px] overflow-y-auto pr-2 pb-4">${listHTML || '<p class="text-sm text-gray-400 italic">Không có dữ liệu</p>'}</div>
+                    `);
+                } else {
+                    const organs = links.data().filter(l => l.source.id === d.id).map(l => l.target.id);
+                    let badge = d.group === 'han' ? 'bg-blue-100 text-blue-700 border-blue-200' : d.group === 'nhiet' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200';
+                    
+                    // FETCH DỮ LIỆU BÀI THUỐC
+                    const relatedPrescriptions = getPrescriptionsForHerb(d.id);
+                    let prescriptionsHTML = relatedPrescriptions.length > 0 ? `<div class="mt-6 border-t border-gray-200 pt-5"><h4 class="font-bold text-emerald-700 mb-4 text-xs uppercase tracking-wider flex items-center gap-2 border-l-4 border-emerald-500 pl-2">Ứng dụng trong Bài thuốc (${relatedPrescriptions.length})</h4><div class="space-y-3">${relatedPrescriptions.map(p => `<div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100"><div class="text-emerald-800 font-bold text-sm mb-2 leading-tight">${p.prescription.name}</div><div class="flex items-center gap-2 text-xs text-gray-600 mb-2"><span class="bg-white px-2 py-0.5 rounded font-medium border border-emerald-200">Liều: ${p.dosage}</span>${p.note ? `<span class="italic">(${p.note})</span>` : ''}</div><div class="text-xs text-gray-600 leading-relaxed bg-white p-2 rounded-lg border border-gray-100">${p.prescription.uses}</div></div>`).join('')}</div></div>` : `<div class="mt-6 border-t border-gray-200 pt-5"><h4 class="font-bold text-gray-500 mb-2 text-xs uppercase tracking-wider">Ứng dụng trong Bài thuốc</h4><p class="text-xs text-gray-500 italic bg-gray-50 p-3 rounded-lg border border-gray-200">Chưa có thông tin bài thuốc chứa vị này trong CSDL.</p></div>`;
+
+                    infoPanel.html(`
+                        <div class="mb-5 inline-block px-3 py-1 ${badge} border rounded-lg text-xs font-bold uppercase tracking-wider">TÍNH: ${d.tinhVi}</div>
+                        <h3 class="text-3xl font-extrabold text-gray-800 mb-6">${d.id}</h3>
+                        
+                        <div class="space-y-6">
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tác động lên Kinh Lạc</h4>
+                                <div class="flex flex-wrap gap-2">${organs.map(o => `<span class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-semibold border border-purple-100 shadow-sm">${o}</span>`).join('')}</div>
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Công dụng & Chủ trị</h4>
+                                <p class="text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-200 text-sm leading-relaxed">${d.uses}</p>
+                            </div>
+                        </div>
+                        ${prescriptionsHTML}
+                    `);
+                }
+            });
+        }
+
+        // --- 6. AUTOCOMPLETE SEARCH & UI CONTROLS ---
+        const searchInput = document.getElementById('search-input');
+        const searchSuggestions = document.getElementById('search-suggestions');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (query === "") {
+                searchSuggestions.classList.add('hidden');
+                document.getElementById('reset-btn').click();
+            } else {
+                const matchedHerbs = allHerbs.filter(m => m.id.toLowerCase().includes(query)).map(m => m.id);
+                if (matchedHerbs.length > 0) {
+                    searchSuggestions.innerHTML = matchedHerbs.slice(0, 15).map(name => 
+                        `<li class="px-4 py-2.5 hover:bg-emerald-50 cursor-pointer text-sm font-medium text-gray-700 hover:text-emerald-700 transition border-b border-gray-100 last:border-0" onclick="selectSearchItem('${name}')">${name}</li>`
+                    ).join('');
+                    searchSuggestions.classList.remove('hidden');
+                } else {
+                    searchSuggestions.innerHTML = `<li class="px-4 py-2.5 text-sm text-gray-500 italic">Không tìm thấy vị thuốc...</li>`;
+                    searchSuggestions.classList.remove('hidden');
+                }
+            }
+        });
+
+        window.selectSearchItem = function(herbName) {
+            searchInput.value = herbName; searchSuggestions.classList.add('hidden');
+            state.searchQuery = herbName; updateGraph();
+            
+            // Tìm và click tự động vào node D3 để bật focus
+            const targetNode = nodeGroup.selectAll("g").filter(d => d.id === herbName).node();
+            if(targetNode) targetNode.dispatchEvent(new MouseEvent('click'));
+        };
+
+        document.addEventListener('click', (e) => { if (!e.target.closest('#search-container')) searchSuggestions.classList.add('hidden'); });
+
+        const kinhContainer = document.getElementById('kinh-filters');
+        STANDARD_ORGANS.forEach(id => {
+            const btn = document.createElement('button');
+            btn.className = "px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg text-xs font-semibold hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 transition shadow-sm";
+            btn.innerText = id;
+            btn.onclick = function() {
+                this.classList.toggle('bg-purple-100'); this.classList.toggle('border-purple-300'); this.classList.toggle('text-purple-800');
+                if (state.activeKinh.includes(id)) { state.activeKinh = state.activeKinh.filter(k => k !== id); } 
+                else { state.activeKinh.push(id); }
+                updateGraph();
+            };
+            kinhContainer.appendChild(btn);
+        });
+        
+        document.querySelectorAll('.filter-tinh').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if(e.target.checked) state.activeTinh.push(val); else state.activeTinh = state.activeTinh.filter(v => v !== val);
+                updateGraph();
+            });
+        });
+        
+        document.getElementById('clear-tinh').addEventListener('click', () => {
+            document.querySelectorAll('.filter-tinh').forEach(cb => cb.checked = false); state.activeTinh = []; updateGraph();
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            state.focusNodeId = null; state.searchQuery = ""; searchInput.value = "";
+            state.activeTinh = []; document.querySelectorAll('.filter-tinh').forEach(cb => cb.checked = false);
+            state.activeKinh = []; Array.from(kinhContainer.children).forEach(btn => { btn.classList.remove('bg-purple-100', 'border-purple-300', 'text-purple-800'); });
+            
+            document.getElementById('info-panel').innerHTML = `<div class="flex flex-col items-center justify-center h-full text-center text-gray-400"><svg class="w-16 h-16 mb-4 stroke-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg><p class="text-base font-medium text-gray-500">Đã khôi phục toàn cảnh</p></div>`;
+            
+            svg.transition().duration(750).call(zoom.transform, initialTransform);
+            updateGraph();
+        });
+
+    </script>
+</body>
+</html>
