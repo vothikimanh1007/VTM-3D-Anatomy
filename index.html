@@ -19,7 +19,7 @@
         
         /* Glassmorphism Panels */
         .glass-panel {
-            background: rgba(9, 9, 11, 0.75);
+            background: rgba(9, 9, 11, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -45,14 +45,13 @@
             box-shadow: 0 0 5px rgba(56, 189, 248, 0.5);
         }
 
-        /* Màn hình chờ Auto-Load Tối ưu hóa */
+        /* Màn hình chờ Auto-Load */
         #init-loader {
             position: fixed; inset: 0; background: rgba(9, 9, 11, 0.98); z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.5s; backdrop-filter: blur(10px);
         }
 
-        /* Nền trang chủ (Background Animation) */
         .bg-grid {
             background-size: 40px 40px;
             background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
@@ -68,32 +67,27 @@
     <!-- MÀN HÌNH 1: TRANG CHỦ (LANDING PAGE)       -->
     <!-- ========================================== -->
     <div id="landing-page" class="fixed inset-0 z-50 overflow-y-auto bg-[#09090b] text-slate-300">
-        <!-- Lưới nền trang trí -->
         <div class="absolute inset-0 bg-grid pointer-events-none"></div>
-        
-        <!-- Vòng sáng trang trí -->
         <div class="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-sky-600/20 rounded-full blur-[120px] pointer-events-none"></div>
         <div class="absolute bottom-[-10%] right-[10%] w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[150px] pointer-events-none"></div>
 
         <div class="relative min-h-screen flex flex-col items-center justify-center p-6 sm:p-12">
-            
             <div class="text-center max-w-4xl mx-auto mb-16">
                 <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-xs font-semibold tracking-widest text-sky-400 mb-6">
-                    <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span> HỆ THỐNG PHIÊN BẢN 2.0
+                    <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span> HỆ THỐNG PHIÊN BẢN 2.5 (CAMERA FLY & HIGHLIGHT)
                 </div>
                 <h1 class="text-5xl sm:text-6xl font-extrabold text-white tracking-tight mb-6 leading-tight">
                     Nền tảng Khai phá Tri thức <br>
                     <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400">Y Học Cổ Truyền</span>
                 </h1>
                 <p class="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-                    Hệ thống số hóa và mô phỏng tương tác 3D đa chiều, liên kết 714 Vị thuốc, hàng trăm Bài thuốc và Hệ thống 12 Tạng Phủ Giải phẫu học.
+                    Hệ thống số hóa và mô phỏng tương tác 3D đa chiều, liên kết Vị thuốc, Bài thuốc và Hệ thống Tạng Phủ Giải phẫu học.
                 </p>
             </div>
 
             <!-- Các Phân hệ (Modules) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
-                
-                <!-- Module 1: 3D Anatomy (Active) -->
+                <!-- Module 1: 3D Anatomy -->
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-sky-500/50 transition-all duration-300 group cursor-pointer relative overflow-hidden" onclick="start3DApp()">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all"></div>
                     <div class="w-12 h-12 bg-sky-500/20 rounded-xl flex items-center justify-center mb-6 border border-sky-500/30 text-sky-400 group-hover:scale-110 transition-transform">
@@ -101,32 +95,28 @@
                     </div>
                     <h2 class="text-2xl font-bold text-white mb-3">Không gian Giải phẫu 3D</h2>
                     <p class="text-sm text-slate-400 mb-8 leading-relaxed">
-                        Khám phá quỹ đạo quy kinh của các vị thuốc trên mô hình cơ thể người thực tế. Căn chỉnh trực quan, lọc dược tính thời gian thực.
+                        Khám phá quỹ đạo quy kinh của các vị thuốc trên mô hình cơ thể người thực tế. Zoom tự động và Lọc dữ liệu mượt mà.
                     </p>
                     <button class="flex items-center gap-2 text-sky-400 font-semibold group-hover:text-sky-300">
                         Khởi động Phân hệ <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                     </button>
                 </div>
 
-                <!-- Module 2: Dashboard 2D (Coming Soon) -->
-                <div class="bg-white/5 border border-white/10 rounded-2xl p-8 opacity-60 cursor-not-allowed relative overflow-hidden">
-                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/30 text-emerald-400">
+                <!-- Module 2: Dashboard 2D Radial (MỞ KHÓA) -->
+                <a href="dashboard.html" target="_blank" class="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-emerald-500/50 transition-all duration-300 group cursor-pointer relative overflow-hidden block">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-6 border border-emerald-500/30 text-emerald-400 group-hover:scale-110 transition-transform">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     </div>
                     <h2 class="text-2xl font-bold text-white mb-3">Dashboard Thống kê (2D)</h2>
                     <p class="text-sm text-slate-400 mb-8 leading-relaxed">
-                        Sơ đồ mạng lưới Network Graph phẳng. Thích hợp để in ấn và xuất báo cáo PDF cho tạp chí.
+                        Sơ đồ mạng lưới Hướng tâm (Radial Edge Bundling). Thích hợp để trích xuất báo cáo tổng quan.
                     </p>
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 rounded text-xs font-medium text-slate-400">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Sắp ra mắt
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium border border-emerald-500/30">
+                        Mở trong Tab mới <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                     </span>
-                </div>
-
+                </a>
             </div>
-            
-            <footer class="mt-20 text-center text-xs text-slate-600">
-                &copy; 2026 Hệ thống Nghiên cứu Khoa học Dữ liệu YHCT.
-            </footer>
+            <footer class="mt-20 text-center text-xs text-slate-600">&copy; 2026 Hệ thống Nghiên cứu Khoa học Dữ liệu YHCT.</footer>
         </div>
     </div>
 
@@ -135,26 +125,25 @@
     <!-- ========================================== -->
     <div id="app-workspace" class="hidden absolute inset-0">
         
-        <!-- MÀN HÌNH CHỜ AUTO-LOAD (CÓ PROGRESS BAR) -->
         <div id="init-loader">
             <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight mb-2 animate-pulse">TCM Platform Engine</h1>
-            <p class="text-slate-400 text-sm mb-6">Đang tự động đồng bộ dữ liệu từ máy chủ...</p>
+            <p class="text-slate-400 text-sm mb-6">Đang khởi tạo không gian và nạp dữ liệu...</p>
             
-            <!-- Thanh Progress Bar -->
             <div class="w-80 h-1.5 bg-slate-800 rounded-full overflow-hidden mb-2">
                 <div id="progress-fill" class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 w-0 transition-all duration-200"></div>
             </div>
             <p id="progress-text" class="text-xs text-sky-400 font-medium mb-6 tracking-wider uppercase">Chuẩn bị không gian...</p>
 
             <div class="text-xs text-slate-500 bg-white/5 p-4 rounded-xl border border-white/5 w-80">
-                <div class="flex justify-between mb-2" id="status-model"><span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400">Đợi...</span></div>
-                <div class="flex justify-between mb-2" id="status-csv"><span>2. Dữ liệu CSV</span> <span class="text-yellow-400">Đợi...</span></div>
-                <div class="flex justify-between" id="status-render"><span>3. Dựng hình 3D</span> <span class="text-yellow-400">Đợi...</span></div>
+                <div class="flex justify-between mb-2" id="status-db"><span>1. CSDL Bài Thuốc</span> <span class="text-green-400">Đã tích hợp ✓</span></div>
+                <div class="flex justify-between mb-2" id="status-model"><span>2. Cơ thể 3D (.glb)</span> <span class="text-yellow-400">Đợi...</span></div>
+                <div class="flex justify-between mb-2" id="status-csv"><span>3. Dữ liệu ViThuoc</span> <span class="text-yellow-400">Đợi...</span></div>
+                <div class="flex justify-between" id="status-render"><span>4. Dựng hình 3D</span> <span class="text-yellow-400">Đợi...</span></div>
             </div>
 
             <div id="manual-fallback" class="hidden mt-8 flex flex-col gap-3 w-80">
-                <p class="text-red-400 text-xs text-center font-bold">⚠️ Tải tự động thất bại (Bị chặn CORS hoặc lỗi File).</p>
-                <p class="text-slate-400 text-xs text-center mb-2">Vui lòng nạp các file dữ liệu theo cách thủ công bên dưới:</p>
+                <p class="text-red-400 text-xs text-center font-bold">⚠️ Không tìm thấy file tại Folder GitHub.</p>
+                <p class="text-slate-400 text-xs text-center mb-2">Vui lòng upload thủ công 2 file động:</p>
                 <label class="bg-slate-800 hover:bg-slate-700 text-sky-300 text-sm py-2 px-4 rounded-lg cursor-pointer text-center border border-slate-600 transition">
                     <span>Tải Cơ thể 3D (.glb)</span> <input type="file" id="fallback-glb" accept=".glb,.gltf" class="hidden">
                 </label>
@@ -168,7 +157,6 @@
 
         <!-- UI Layer -->
         <div class="absolute inset-0 pointer-events-none z-10 flex justify-between p-5">
-            
             <!-- LEFT SIDEBAR -->
             <div class="glass-panel w-[360px] h-full flex flex-col pointer-events-auto overflow-hidden">
                 <div class="p-5 border-b border-white/5 flex items-center justify-between shrink-0">
@@ -176,7 +164,6 @@
                         <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-emerald-400 tracking-tight">TCM 3D Anatomy</h1>
                         <p class="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-1">Knowledge Graph Engine</p>
                     </div>
-                    <!-- Nút thoát ra Trang chủ -->
                     <button onclick="returnToHome()" class="p-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg transition" title="Về trang chủ">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                     </button>
@@ -201,7 +188,6 @@
                         <div class="flex flex-col text-right"><span class="text-slate-500 font-medium">Bài thuốc (CSDL)</span><span id="stat-prescriptions" class="text-lg font-bold text-emerald-400 leading-none mt-1">0</span></div>
                     </div>
 
-                    <!-- Căn chỉnh Tạng Phủ -->
                     <div class="mt-4 pt-3 border-t border-white/5">
                         <h3 class="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mb-2 flex justify-between">Căn chỉnh Tạng 3D <span class="text-sky-400 cursor-pointer" onclick="toggleAlignment()">[Sửa]</span></h3>
                         <div id="alignment-tools" class="hidden space-y-2">
@@ -275,13 +261,11 @@
             document.getElementById('landing-page').classList.add('hidden');
             document.getElementById('app-workspace').classList.remove('hidden');
             
-            // Kích hoạt load dữ liệu nếu là lần đầu tiên mở
             if (!hasInitialized3D) {
                 init3DEnvironment();
                 triggerAutoLoad();
                 hasInitialized3D = true;
             } else {
-                // Khôi phục animate loop nếu đã vào trước đó
                 animate();
             }
         }
@@ -289,7 +273,6 @@
         function returnToHome() {
             document.getElementById('app-workspace').classList.add('hidden');
             document.getElementById('landing-page').classList.remove('hidden');
-            // Đóng băng GPU render để tiết kiệm tài nguyên khi ở ngoài Trang chủ
             if(animationId) cancelAnimationFrame(animationId);
         }
 
@@ -298,10 +281,86 @@
         }
 
         // ==========================================
-        // 1. CƠ SỞ DỮ LIỆU ĐỘNG & HÀM PHỤ TRỢ
+        // 0. CƠ SỞ DỮ LIỆU TÍCH HỢP SẴN (HARDCODED DATA)
         // ==========================================
+        const RAW_BAI_THUOC_CSV = `ID_BaiThuoc,TenBaiThuoc,ChuTri,NguonGoc
+101,Cao ích mẫu (Công thức của QDDP Nghệ An),"Điều kinh, bổ huyết.","Sách ""Những cây thuốc và vị thuốc Việt Nam"""
+102,Cao hương ngải (FUNUX/CYPERIN),"Chữa kinh nguyệt không đều, đau bụng kinh, khó sinh nở, khí hư bạch đới.",Đơn của Đỗ Tất Lợi.
+103,"Thuốc an thai (Ngải cứu, Tía tô)","Chữa đang có thai bị đau bụng, chảy máu.","Sách ""Những cây thuốc và vị thuốc Việt Nam"""
+104,Thuốc chữa vàng da (Bệnh viện Lạng Sơn),"Chữa bệnh vàng da và niêm mạc, nước tiểu có sắc tố mật.",Kinh nghiệm Bệnh viện Lạng Sơn.
+105,"Đơn thuốc chữa viêm sưng tai giữa, tắc tia sữa","Chữa bệnh viêm sưng tai giữa, sưng tắc tia sữa.",Kinh nghiệm dùng cây diếp cá.
+106,Tiểu bán hạ gia phục linh thang,Chữa phụ nữ có thai bị nôn mửa .,Trương Trọng Cảnh.
+107,"Đơn thuốc chữa hen suyễn, nôn","Chữa hen suyễn, nặng mặt, nằm không được, muốn nôn oẹ, bụng dưới nôn nao.",Kinh nghiệm nhân dân.
+108,Đơn thuốc điều kinh (Vỏ rễ bông),"Điều kinh, thông kinh.",Kinh nghiệm nhân dân.
+115,Thược dược cam thảo thang,"Chữa chân và đầu gối đau nhức không co duỗi được, đau bụng.",Trương Trọng Cảnh.
+116,Quế chi gia linh truật,"Chữa đầu nhức, mắt hoa.",Trương Trọng Cảnh.
+118,Đơn thuốc chữa băng huyết bạch đới (Xích thược),"Chữa băng huyết, bạch đới.",Kinh nghiệm nhân dân.
+119,Duyên hồ sách thang,"Chữa đau bụng, đau khi hành kinh.",Hòa hán ứng dụng phương (Nhật Bản).
+121,Đơn thuốc chữa đau dạ dày (BCA VN),Chữa đau dạ dày.,Kinh nghiệm nhân dân.
+123,Ngân kiều tán,"Chữa mụn nhọt, sốt, cảm.",Kinh nghiệm cổ phương.`;
+
+        const RAW_CONG_THUC_CSV = `ID_BaiThuoc,ID_ViThuoc,TenViThuoc,LieuLuong,Ghi_chu_che_bien
+101,1.0,Ích mẫu,70%,
+101,473.0,Xuyên khung,2%,
+101,17.0,Đương quy,10%,
+101,23.0,Bạch thược,3%,
+101,2.0,Hương phụ,5%,tứ chế
+102,2.0,Hương phụ,1g,
+102,3.0,Ngải cứu,1g,
+102,1.0,Ích mẫu,1g,
+103,,Lá ngải cứu,16g,khô
+103,469.0,Tía tô,16g,
+105,5.0,Cây diếp cá,20g,khô
+106,9.0,Bán hạ,8g,
+106,153.0,Phục linh,6g,
+115,23.0,Bạch thược,12g,
+115,606.0,Cam thảo,4g,
+116,,Quế chi,6g,
+116,23.0,Bạch thược,6g,
+116,630.0,Đại táo,6g,
+116,265.0,Sinh khương,6g,
+116,153.0,Phục linh,6g,
+116,280.0,Bạch truật,6g,
+116,606.0,Cam thảo,4g,
+118,24.0,Xích thược,(bằng nhau),Tán nhỏ
+118,2.0,Hương phụ,(bằng nhau),Tán nhỏ
+119,28.0,Duyên hồ sách,4.0g,
+119,17.0,Đương quy,3.0g`;
+
         let PRESCRIPTIONS_DB = [];
         let FORMULAS_DB = [];
+
+        try {
+            const rawBaiThuoc = d3.csvParse(RAW_BAI_THUOC_CSV.trim());
+            PRESCRIPTIONS_DB = rawBaiThuoc.map(row => {
+                const keys = Object.keys(row);
+                const idK = keys.find(k => k && k.includes('ID_BaiThuoc'));
+                const nameK = keys.find(k => k && k.includes('TenBaiThuoc'));
+                const usesK = keys.find(k => k && (k.includes('ChuTri') || k.includes('CongDung')));
+                const originK = keys.find(k => k && k.includes('NguonGoc'));
+                return {
+                    id: idK ? parseInt(row[idK]) : 0, 
+                    name: nameK ? row[nameK] : "Chưa rõ", 
+                    uses: usesK ? row[usesK] : "", 
+                    origin: originK ? row[originK] : ""
+                };
+            }).filter(p => p.id);
+
+            const rawCongThuc = d3.csvParse(RAW_CONG_THUC_CSV.trim());
+            FORMULAS_DB = rawCongThuc.map(row => {
+                const keys = Object.keys(row);
+                const baiIdK = keys.find(k => k && k.includes('ID_BaiThuoc'));
+                const herbK = keys.find(k => k && (k.includes('TenViThuoc') || k.includes('ViThuoc')));
+                const dosageK = keys.find(k => k && k.includes('LieuLuong'));
+                const noteK = keys.find(k => k && k.includes('Ghi_chu'));
+                return {
+                    baiId: baiIdK ? parseInt(row[baiIdK]) : 0, 
+                    herbName: herbK ? row[herbK] : "", 
+                    dosage: dosageK ? row[dosageK] : "", 
+                    note: noteK ? row[noteK] : ""
+                };
+            }).filter(f => f.baiId);
+        } catch(e) { console.error("Lỗi khi đọc dữ liệu cứng:", e); }
 
         function getPrescriptionsForHerb(herbName) {
             if(!herbName) return [];
@@ -335,12 +394,16 @@
         const ORGAN_NAMES = Object.keys(ORGAN_COORDS);
         let herbMeshes = []; let linkMeshes = [];
 
-        // Các biến toàn cục của Three.js
         let scene, camera, renderer, controls;
         let organSystemGroup, bodyGroup, herbsGroup;
 
+        // Biến điều khiển Camera Fly
+        let isFlying = false;
+        let flyTarget = new THREE.Vector3();
+        let flyCameraPos = new THREE.Vector3();
+
         // ==========================================
-        // 2. KHỞI TẠO ENGINE THREE.JS (Chỉ chạy khi bấm Start)
+        // 2. KHỞI TẠO ENGINE THREE.JS
         // ==========================================
         function init3DEnvironment() {
             const container = document.getElementById('canvas-container');
@@ -360,7 +423,6 @@
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(50, 100, 50); scene.add(dirLight);
             const backLight = new THREE.DirectionalLight(0x38bdf8, 1.5); backLight.position.set(-50, -20, -50); scene.add(backLight);
 
-            // Tạng Phủ
             organSystemGroup = new THREE.Group();
             scene.add(organSystemGroup);
             
@@ -440,16 +502,17 @@
         }
 
         // ==========================================
-        // 4. LUỒNG TẢI DỮ LIỆU ĐƯỢC GỌI TỪ NÚT START
+        // 4. LUỒNG TẢI DỮ LIỆU ĐỘNG TỪ GITHUB
         // ==========================================
         function triggerAutoLoad() {
-            document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D (.glb)</span> <span class="text-yellow-400 animate-pulse">Đang tải...</span>`;
+            document.getElementById('stat-prescriptions').innerText = PRESCRIPTIONS_DB.length;
+            document.getElementById('status-model').innerHTML = `<span>2. Cơ thể 3D (.glb)</span> <span class="text-yellow-400 animate-pulse">Đang tải...</span>`;
             
             const gltfLoader = new THREE.GLTFLoader();
             gltfLoader.load('./human_body.glb', 
                 (gltf) => { 
                     setupBodyModel(gltf.scene); 
-                    document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D (.glb)</span> <span class="text-green-400">Thành công ✓</span>`;
+                    document.getElementById('status-model').innerHTML = `<span>2. Cơ thể 3D (.glb)</span> <span class="text-green-400">Thành công ✓</span>`;
                     document.getElementById('progress-fill').style.width = '40%';
                     loadCSVData(); 
                 }, 
@@ -461,9 +524,9 @@
                     }
                 },
                 (err) => { 
-                    console.warn("Không tìm thấy human_body.glb."); 
+                    console.warn("Không tìm thấy human_body.glb. Dùng giả lập."); 
                     createDummyBody(); 
-                    document.getElementById('status-model').innerHTML = `<span>1. Mô hình 3D</span> <span class="text-slate-400">Dùng giả lập</span>`;
+                    document.getElementById('status-model').innerHTML = `<span>2. Cơ thể 3D</span> <span class="text-slate-400">Dùng giả lập</span>`;
                     document.getElementById('progress-fill').style.width = '40%';
                     loadCSVData();
                 }
@@ -471,82 +534,42 @@
         }
 
         async function loadCSVData() {
-            document.getElementById('progress-text').innerText = `Tải Dữ liệu Y học...`;
-            document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-yellow-400 animate-pulse">Đang đọc...</span>`;
+            document.getElementById('progress-text').innerText = `Tải Dữ liệu Vị Thuốc...`;
+            document.getElementById('status-csv').innerHTML = `<span>3. Dữ liệu ViThuoc</span> <span class="text-yellow-400 animate-pulse">Đang đọc...</span>`;
             
             try {
-                const [viThuocRes, baiThuocRes, congThucRes] = await Promise.all([
-                    fetch('./ViThuoc_final.csv'),
-                    fetch('./BaiThuoc.csv'),
-                    fetch('./CongThuc_Cleaned.csv')
-                ]);
-
-                if (!viThuocRes.ok) throw new Error("Fetch failed");
-
-                const [viThuocText, baiThuocText, congThucText] = await Promise.all([
-                    viThuocRes.text(), baiThuocRes.text(), congThucRes.text()
-                ]);
+                const viThuocRes = await fetch('./ViThuoc_final.csv').catch(() => null);
+                if (!viThuocRes || !viThuocRes.ok) throw new Error("Missing ViThuoc");
+                const viThuocText = await viThuocRes.text();
 
                 document.getElementById('progress-fill').style.width = '60%';
-
-                const rawBaiThuoc = d3.csvParse(baiThuocText);
-                PRESCRIPTIONS_DB = rawBaiThuoc.map(row => {
-                    const keys = Object.keys(row);
-                    const idK = keys.find(k => k.includes('ID_BaiThuoc'));
-                    const nameK = keys.find(k => k.includes('TenBaiThuoc'));
-                    const usesK = keys.find(k => k.includes('ChuTri') || k.includes('CongDung'));
-                    const originK = keys.find(k => k.includes('NguonGoc'));
-                    return {
-                        id: idK ? parseInt(row[idK]) : 0, 
-                        name: nameK ? row[nameK] : "Chưa rõ", 
-                        uses: usesK ? row[usesK] : "", 
-                        origin: originK ? row[originK] : ""
-                    };
-                });
-
-                const rawCongThuc = d3.csvParse(congThucText);
-                FORMULAS_DB = rawCongThuc.map(row => {
-                    const keys = Object.keys(row);
-                    const baiIdK = keys.find(k => k.includes('ID_BaiThuoc'));
-                    const herbK = keys.find(k => k.includes('TenViThuoc') || k.includes('ViThuoc'));
-                    const dosageK = keys.find(k => k.includes('LieuLuong'));
-                    const noteK = keys.find(k => k.includes('Ghi_chu'));
-                    return {
-                        baiId: baiIdK ? parseInt(row[baiIdK]) : 0, 
-                        herbName: herbK ? row[herbK] : "", 
-                        dosage: dosageK ? row[dosageK] : "", 
-                        note: noteK ? row[noteK] : ""
-                    };
-                });
-                document.getElementById('stat-prescriptions').innerText = PRESCRIPTIONS_DB.length;
-
-                const rawViThuoc = d3.csvParse(viThuocText);
-                document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-green-400">Thành công ✓</span>`;
+                document.getElementById('status-csv').innerHTML = `<span>3. Dữ liệu ViThuoc</span> <span class="text-green-400">Thành công ✓</span>`;
                 
+                const rawViThuoc = d3.csvParse(viThuocText);
                 processCSVChunked(rawViThuoc);
 
             } catch (error) {
-                document.getElementById('status-csv').innerHTML = `<span>2. Dữ liệu CSV</span> <span class="text-red-400">Bị chặn / Lỗi File</span>`;
+                document.getElementById('status-csv').innerHTML = `<span>3. Dữ liệu ViThuoc</span> <span class="text-red-400">Bị chặn / Lỗi File</span>`;
                 document.getElementById('manual-fallback').classList.remove('hidden');
-                document.getElementById('progress-text').innerText = `Vui lòng sử dụng tính năng tải thủ công.`;
+                document.getElementById('progress-text').innerText = `Vui lòng tải file thủ công.`;
             }
         }
 
         // ==========================================
-        // KHUNG DỰNG HÌNH CHIA NHỎ (CHUNKING)
+        // KHUNG DỰNG HÌNH CHIA NHỎ & FIX LỖI HIGHLIGHT
         // ==========================================
         function processCSVChunked(rawData) {
-            document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span id="render-percent" class="text-yellow-400 animate-pulse">0%</span>`;
+            document.getElementById('status-render').innerHTML = `<span>4. Dựng hình 3D</span> <span id="render-percent" class="text-yellow-400 animate-pulse">0%</span>`;
             
             herbsGroup.clear(); herbMeshes = []; linkMeshes = []; 
             let mapDedup = new Map();
 
             rawData.forEach(row => {
                 const keys = Object.keys(row);
-                const tenKey = keys.find(k => k.toLowerCase().includes('tenvietnam') || k.toLowerCase().includes('tên'));
-                const tinhViKey = keys.find(k => k.toLowerCase().includes('tinhvi') || k.toLowerCase().includes('tính vị'));
-                const quyKinhKey = keys.find(k => k.toLowerCase().includes('quykinh') || k.toLowerCase().includes('quy kinh'));
-                const usesKey = keys.find(k => k.toLowerCase().includes('congdung') || k.toLowerCase().includes('chutri'));
+                const tenKey = keys.find(k => k && (k.toLowerCase().includes('tenvietnam') || k.toLowerCase().includes('tên')));
+                const tinhViKey = keys.find(k => k && (k.toLowerCase().includes('tinhvi') || k.toLowerCase().includes('tính vị')));
+                const quyKinhKey = keys.find(k => k && (k.toLowerCase().includes('quykinh') || k.toLowerCase().includes('quy kinh')));
+                const usesKey = keys.find(k => k && (k.toLowerCase().includes('congdung') || k.toLowerCase().includes('chutri')));
 
                 let ten = tenKey && row[tenKey] ? row[tenKey].trim() : "";
                 if(!ten || mapDedup.has(ten)) return;
@@ -566,7 +589,7 @@
             const validHerbs = Array.from(mapDedup.values());
             
             if(validHerbs.length === 0) {
-                alert("Hệ thống không tìm thấy vị thuốc nào! Vui lòng kiểm tra lại file CSV.");
+                alert("Hệ thống không tìm thấy vị thuốc nào! Vui lòng kiểm tra lại file CSV của bạn.");
                 hideLoader(); return;
             }
             
@@ -582,7 +605,8 @@
                     const radius = 70 + Math.random() * 60; const theta = i * 137.5 * (Math.PI/180); const y = -50 + Math.random() * 100;
                     const x = radius * Math.cos(theta); const z = radius * Math.sin(theta);
 
-                    const herbMat = new THREE.MeshStandardMaterial({ color: data.color, emissive: data.color, emissiveIntensity: 0.8 });
+                    // FIX HIGHLIGHT BUG: Tạo Material độc lập cho TỪNG vị thuốc để làm mở/sáng không bị ảnh hưởng chéo
+                    const herbMat = new THREE.MeshBasicMaterial({ color: data.color, transparent: true, opacity: 1 });
                     const herbMesh = new THREE.Mesh(sharedHerbGeo, herbMat);
                     herbMesh.position.set(x, y, z);
                     herbMesh.userData = { type: 'herb', id: data.id, tinhVi: data.tinhVi, group: data.group, targetNames: data.targetNames, uses: data.uses, color: data.color };
@@ -619,7 +643,7 @@
                 if (currentIndex < validHerbs.length) {
                     requestAnimationFrame(renderChunk);
                 } else {
-                    document.getElementById('status-render').innerHTML = `<span>3. Dựng hình 3D</span> <span class="text-green-400">Thành công ✓</span>`;
+                    document.getElementById('status-render').innerHTML = `<span>4. Dựng hình 3D</span> <span class="text-green-400">Thành công ✓</span>`;
                     document.getElementById('progress-text').innerText = `Hoàn tất!`;
                     applyFilters();
                     setTimeout(hideLoader, 600);
@@ -650,14 +674,30 @@
             const reader = new FileReader();
             reader.onload = (evt) => { 
                 try { processCSVChunked(d3.csvParse(evt.target.result)); hideLoader(); } 
-                catch(e) { alert("Có lỗi trong lúc xử lý file CSV."); }
+                catch(e) { alert("Có lỗi trong lúc xử lý file CSV."); console.error(e); }
             };
             reader.readAsText(file);
         });
 
         // ==========================================
-        // 5. THANH TÌM KIẾM THÔNG MINH
+        // 5. CAMERA FLY & TÌM KIẾM THÔNG MINH
         // ==========================================
+        function flyTo(object) {
+            const pos = new THREE.Vector3();
+            object.getWorldPosition(pos);
+            flyTarget.copy(pos);
+
+            // Tính toán vị trí Camera lùi lại một chút so với vật thể để quan sát
+            const distance = object.userData.type === 'organ' ? 120 : 60;
+            const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+            
+            flyCameraPos.copy(pos).add(direction.multiplyScalar(distance));
+            
+            isFlying = true;
+            // Nhả quyền điều khiển lại cho người dùng sau 1.5s
+            setTimeout(() => { isFlying = false; }, 1500);
+        }
+
         const searchInput = document.getElementById('search-input');
         const searchSuggestions = document.getElementById('search-suggestions');
 
@@ -718,14 +758,19 @@
             state.focusedObj = obj; const data = obj.userData;
             const panel = document.getElementById('info-panel'); const content = document.getElementById('info-content');
 
-            herbMeshes.forEach(m => { m.material.transparent = true; m.material.opacity = 0.05; m.scale.set(1,1,1); });
+            // Reset tất cả về mờ nhạt
+            herbMeshes.forEach(m => { 
+                m.material.opacity = 0.05; m.scale.set(1,1,1); 
+                if(m.children[0]) m.children[0].material.color.setHex(0xffffff); // Chữ trắng
+            });
             linkMeshes.forEach(l => { l.visible = false; });
 
             if (data.id && ORGAN_NAMES.includes(data.id)) {
                 const orgName = data.id; let herbCount = 0;
                 herbMeshes.forEach(m => { 
                     if (m.userData.targetNames.includes(orgName) && m.visible) { 
-                        m.material.transparent = false; m.material.opacity = 1; m.scale.set(1.5, 1.5, 1.5); herbCount++; 
+                        m.material.opacity = 1; m.scale.set(1.8, 1.8, 1.8); herbCount++; 
+                        if(m.children[0]) m.children[0].material.color.setHex(0x38bdf8); // Chữ xanh Sky cho nhánh của Tạng
                     } 
                 });
                 linkMeshes.forEach(l => {
@@ -737,8 +782,12 @@
                 });
 
                 content.innerHTML = `<div class="mb-4"><span class="px-2.5 py-1 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded text-[10px] uppercase font-bold tracking-widest">Tạng Phủ Kinh Lạc</span><h3 class="text-3xl font-bold text-white mt-2">${orgName}</h3></div><div class="bg-white/5 border border-white/10 rounded-xl p-4"><p class="text-sm text-slate-300">Ghi nhận <strong class="text-sky-400">${herbCount}</strong> vị thuốc đang hiển thị có tác động vào ${orgName}.</p></div>`;
+                flyTo(obj);
+
             } else if (data.type === 'herb') {
-                obj.material.transparent = false; obj.material.opacity = 1; obj.scale.set(2.5, 2.5, 2.5);
+                obj.material.opacity = 1; obj.scale.set(3, 3, 3); // Phóng to gấp 3 lần
+                if(obj.children[0]) obj.children[0].material.color.setHex(0xfbbf24); // Đổi Nhãn chữ thành màu Vàng Gold
+
                 linkMeshes.forEach(l => { 
                     if (l.userData.source === data.id) { 
                         l.visible = true; l.material.opacity = 0.6; l.material.color.setHex(data.color); 
@@ -750,6 +799,7 @@
                 let badgeClass = data.group === 'han' ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' : data.group === 'nhiet' ? 'bg-red-500/20 text-red-300 border-red-500/30' : 'bg-green-500/20 text-green-300 border-green-500/30';
 
                 content.innerHTML = `<div class="mb-4"><span class="px-2.5 py-1 ${badgeClass} border rounded text-[10px] uppercase font-bold tracking-widest">Hồ Sơ Vị Thuốc</span><h3 class="text-3xl font-bold text-white mt-3">${data.id}</h3></div><div class="space-y-4"><div class="flex gap-4"><div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/5"><h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Tính Vị</h4><p class="text-white text-sm font-medium">${data.tinhVi}</p></div><div class="flex-1 bg-white/5 p-3 rounded-xl border border-white/5"><h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Quy Kinh</h4><p class="text-white text-sm font-medium truncate" title="${data.targetNames.join(', ')}">${data.targetNames.join(', ') || 'Không rõ'}</p></div></div><div><h4 class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Công dụng & Chủ trị</h4><p class="text-slate-300 text-sm leading-relaxed bg-white/5 p-3 rounded-xl border border-white/5">${data.uses || 'Chưa cập nhật'}</p></div></div>${prescriptionsHTML}`;
+                flyTo(obj);
             }
             panel.classList.remove('translate-x-[120%]');
         }
@@ -769,9 +819,6 @@
             });
         }
 
-        // ==========================================
-        // 7. LỌC DỮ LIỆU TỐI ƯU HÓA O(1) CHO HIỆU NĂNG CAO
-        // ==========================================
         function applyFilters() {
             if (state.focusedObj) { state.focusedObj = null; document.getElementById('info-panel').classList.add('translate-x-[120%]'); }
             
@@ -789,9 +836,9 @@
                 
                 if(mesh.visible) {
                     vHerbs++;
-                    mesh.material.transparent = isAnyFilterActive;
                     mesh.material.opacity = isAnyFilterActive ? 0.9 : 1;
                     mesh.scale.set(isAnyFilterActive ? 1.5 : 1, isAnyFilterActive ? 1.5 : 1, isAnyFilterActive ? 1.5 : 1);
+                    if(mesh.children[0]) mesh.children[0].material.color.setHex(0xffffff); // Chữ trắng lại
                 }
             });
 
@@ -842,7 +889,16 @@
 
         function animate() {
             animationId = requestAnimationFrame(animate);
-            if(herbsGroup) herbsGroup.rotation.y += 0.0015;
+            
+            // Xoay toàn cảnh nếu không có gì đang focus
+            if(herbsGroup && !state.focusedObj && !isFlying) herbsGroup.rotation.y += 0.0015;
+
+            // Chuyển động mượt mà của Camera khi Focus
+            if (isFlying) {
+                camera.position.lerp(flyCameraPos, 0.06);
+                controls.target.lerp(flyTarget, 0.06);
+            }
+
             if(controls) controls.update(); 
             if(renderer && scene && camera) renderer.render(scene, camera);
         }
